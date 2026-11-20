@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Unity WebGL Player | {{{ PRODUCT_NAME }}}</title>
+
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <link rel="stylesheet" href="TemplateData/style.css">
+
+  <style>
+    body {
+      margin: 0;
+      background: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #unity-container {
+      position: relative;
+      transform-origin: center center;
+    }
+
+    #unity-canvas {
+      display: block;
+      background: black;
+    }
+
+    #unity-loading-bar {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas"></canvas>
+
+    <div id="unity-loading-bar">
+      <div id="unity-progress-bar-empty">
+        <div id="unity-progress-bar-full"></div>
+      </div>
+    </div>
+
+    <div id="unity-warning"></div>
+  </div>
+
+  <script>
+    var container = document.getElementById("unity-container");
+    var canvas = document.getElementById("unity-canvas");
+    var loadingBar = document.getElementById("unity-loading-bar");
+    var progressBarFull = document.getElementById("unity-progress-bar-full");
+    var warningBanner = document.getElementById("unity-warning");
+
+    function unityShowBanner(msg, type) {
+      function updateBannerVisibility() {
+        warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+      }
+
+      var div = document.createElement('div');
+      div.innerHTML = msg;
+      warningBanner.appendChild(div);
+
+      if (type === 'error') {
+        div.style = 'background: red; padding: 10px;';
+      } else {
+        if (type === 'warning') {
+          div.style = 'background: yellow; padding: 10px;';
+        }
+        setTimeout(function () {
+          if (div.parentNode) {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }
+        }, 5000);
+      }
+
+      updateBannerVisibility();
+    }
+
+    var buildUrl = "Build";
+    var loaderUrl = buildUrl + "/{{{ LOADER_FILENAME }}}";
+
+    var config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
+      showBanner: unityShowBanner
+    };
+
+    // 🔥 LANDSCAPE SCALING (16:9)
+    function scaleGame() {
+      const targetRatio = 16 / 9;
+
+      let screenWidth = window.innerWidth;
+      let screenHeight = window.innerHeight;
+      let screenRatio = screenWidth / screenHeight;
+
+      let width, height;
+
+      if (screenRatio > targetRatio) {
+        height = screenHeight;
+        width = height * targetRatio;
+      } else {
+        width = screenWidth;
+        height = width / targetRatio;
+      }
+
+      container.style.width = width + "px";
+      container.style.height = height + "px";
+
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+    }
+
+    window.addEventListener("resize", scaleGame);
+
+    // ✅ MOBILE SUPPORT
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      var meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no';
+      document.head.appendChild(meta);
+
+      container.className = "unity-mobile";
+      canvas.className = "unity-mobile";
+    }
+
+    loadingBar.style.display = "block";
+
+    var script = document.createElement("script");
+    script.src = loaderUrl;
+
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (progress) {
+        progressBarFull.style.width = (progress * 100) + "%";
+      }).then(function (instance) {
+
+        window.unityInstance = instance;
+        loadingBar.style.display = "none";
+
+        // ✅ Apply scaling after load
+        scaleGame();
+
+      }).catch(function (message) {
+        alert(message);
+      });
+    };
+
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
