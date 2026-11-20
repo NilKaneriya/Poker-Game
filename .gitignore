@@ -1,0 +1,44 @@
+# ---------- Node (poker-server) ----------
+node_modules/
+.env
+poker-server/data/
+*.log
+
+# ---------- Unity (poker-unity/PokerGame) ----------
+poker-unity/PokerGame/[Ll]ibrary/
+poker-unity/PokerGame/[Tt]emp/
+poker-unity/PokerGame/[Oo]bj/
+poker-unity/PokerGame/[Bb]uild/
+poker-unity/PokerGame/[Bb]uilds/
+poker-unity/PokerGame/[Ll]ogs/
+poker-unity/PokerGame/[Uu]ser[Ss]ettings/
+poker-unity/PokerGame/[Mm]emoryCaptures/
+poker-unity/PokerGame/[Rr]ecordings/
+
+# IDE and Unity build output
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+!poker-unity/PokerGame/Assets/Plugins/**/*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.apk
+*.aab
+*.unitypackage
+crashlytics-build.properties
+.vs/
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
