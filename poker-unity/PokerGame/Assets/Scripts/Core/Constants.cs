@@ -30,6 +30,7 @@ namespace Poker.Core
             public const string CreateTable = "createTable";
             public const string JoinTable = "joinTable";
             public const string LeaveTable = "leaveTable";
+            public const string StartGame = "startGame";
             public const string ListTables = "listTables";
             public const string PlayerAction = "playerAction";
             public const string Rebuy = "rebuy";
@@ -57,6 +58,13 @@ namespace Poker.Core
             public const string AllIn = "allIn";
         }
 
+        /// <summary>Who fills the table. Must match TABLE_MODES in engine/constants.js.</summary>
+        public static class TableModes
+        {
+            public const string Bots = "bots";       // you vs computer players, starts at once
+            public const string Friends = "friends"; // humans only, waits until every seat is taken
+        }
+
         /// <summary>Hand stages. Must match engine/constants.js.</summary>
         public static class PokerStages
         {
@@ -71,6 +79,8 @@ namespace Poker.Core
         public static class PrefsKeys
         {
             public const string AuthToken = "poker.authToken";
+            public const string CreateMode = "poker.create.mode";   // last picked TableModes value
+            public const string CreateSeats = "poker.create.seats"; // last picked table size
         }
 
         /// <summary>Network timeouts.</summary>
@@ -85,6 +95,8 @@ namespace Poker.Core
         {
             public const int StartingChips = 1000;
             public const int TableCodeLength = 5;
+            public const int MinSeats = 2; // table sizes the host can pick (server: config.table)
+            public const int MaxSeats = 6;
         }
     }
 }

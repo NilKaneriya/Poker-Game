@@ -53,6 +53,9 @@ namespace Poker.UI.Game
             {
                 code = "K7QXP",
                 name = "Friday Night",
+                mode = TableModes.Friends,
+                started = true,
+                hostId = "p-maya",
                 maxSeats = 6,
                 smallBlind = 10,
                 bigBlind = 20,
@@ -61,6 +64,30 @@ namespace Poker.UI.Game
                 seats = seats,
                 you = new YouInfo { playerId = "p-you", seat = 2 },
                 hand = hand,
+            };
+        }
+
+        /// <summary>A play-with-friends table that is not full yet: you (the host) and one friend.</summary>
+        public static TableState CreateWaitingRoom(int maxSeats, bool started = false)
+        {
+            var seats = new List<SeatInfo>();
+            for (int i = 0; i < maxSeats; i++) seats.Add(null);
+            seats[0] = new SeatInfo { seat = 0, playerId = "p-you", name = "You", chips = 1000, connected = true };
+            seats[1] = new SeatInfo { seat = 1, playerId = "p-leo", name = "Leo", chips = 1000, connected = true };
+
+            return new TableState
+            {
+                code = "K7QXP",
+                name = "Friday Night",
+                mode = TableModes.Friends,
+                started = started,
+                hostId = "p-you",
+                maxSeats = maxSeats,
+                smallBlind = 10,
+                bigBlind = 20,
+                buttonSeat = -1,
+                seats = seats,
+                you = new YouInfo { playerId = "p-you", seat = 0 },
             };
         }
     }

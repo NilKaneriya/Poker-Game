@@ -14,9 +14,27 @@ namespace Poker.UI.Game
     /// Game scene: draws the table from the latest server snapshot (TableState).
     /// It holds no game rules - every update simply re-renders what the server sent,
     /// and player input is forwarded to the server as an intention.
+    ///
+    /// Play-with-friends tables open in a waiting room (WaitingRoomPanel) until every
+    /// seat is taken or the host starts; then the same scene simply turns into the game.
     /// </summary>
     public class GameController : MonoBehaviour
     {
+        /// <summary>
+        /// Which of the 6 screen positions are used for each table size, clockwise from
+        /// the bottom (you). Screen positions: 0 bottom, 1 lower left, 2 upper left,
+        /// 3 top, 4 upper right, 5 lower right.
+        /// </summary>
+        private static readonly int[][] SeatLayouts =
+        {
+            new[] { 0 },
+            new[] { 0 },
+            new[] { 0, 3 },             // heads-up: face to face
+            new[] { 0, 2, 4 },
+            new[] { 0, 1, 3, 5 },
+            new[] { 0, 1, 2, 4, 5 },
+            new[] { 0, 1, 2, 3, 4, 5 },
+        };
 
         [Header("Header")]
         [SerializeField] private TMP_Text tableNameText;
@@ -35,6 +53,7 @@ namespace Poker.UI.Game
         [SerializeField] private TMP_Text waitingText;
 
         [Header("Panels")]
+        [SerializeField] private WaitingRoomPanel waitingRoom;
         [SerializeField] private ActionBar actionBar;
         [SerializeField] private ResultPanel resultPanel;
         [SerializeField] private ToastView toast;
@@ -57,10 +76,14 @@ namespace Poker.UI.Game
             actionBar.ActionChosen += (action, amount) => Net.SendAction(action, amount);
             resultPanel.RebuyClicked += () => Net.Rebuy();
             resultPanel.LobbyClicked += LeaveTable;
+            waitingRoom.CopyCodeClicked += CopyCode;
+            waitingRoom.CopyLinkClicked += CopyInviteLink;
+            waitingRoom.ShareClicked += ShareInvite;
+            waitingRoom.StartClicked += () => Net.StartGame();
 
             Net.TableStateReceived += Render;
             Net.ActionRejected += OnActionRejected;
-            Net.ServerErrorReceived += toast.Show;
+            Net.ServerErrorReceived += OnServerError;
             Net.AuthRejected += OnAuthRejected;
 
             actionBar.Hide();
@@ -76,7 +99,7 @@ namespace Poker.UI.Game
             if (Net == null) return;
             Net.TableStateReceived -= Render;
             Net.ActionRejected -= OnActionRejected;
-            if (toast != null) Net.ServerErrorReceived -= toast.Show;
+            Net.ServerErrorReceived -= OnServerError;
             Net.AuthRejected -= OnAuthRejected;
         }
 
@@ -94,6 +117,7 @@ namespace Poker.UI.Game
 
             RenderSeats(state, hand);
             RenderBoard(hand);
+            RenderWaitingRoom(state);
             RenderActionBar(state, hand);
             RenderResult(state, hand);
         }
@@ -103,7 +127,8 @@ namespace Poker.UI.Game
             int mySeat = Mathf.Max(0, state.you?.seat ?? 0);
             int seatCount = state.seats.Count;
 
-            for (int i = 0; i < seats.Length; i++) seats[i].gameObject.SetActive(i < seatCount);
+            var used = new HashSet<int>(Layout(seatCount));
+            for (int i = 0; i < seats.Length; i++) seats[i].gameObject.SetActive(used.Contains(i));
 
             for (int serverSeat = 0; serverSeat < seatCount; serverSeat++)
             {
@@ -143,14 +168,27 @@ namespace Poker.UI.Game
             stageText.gameObject.SetActive(hand != null);
             if (hand != null) stageText.text = StageLabel(hand.stage);
 
-            waitingText.gameObject.SetActive(hand == null);
-            if (hand == null)
+            // The waiting room panel covers the "between hands" message before the game starts.
+            waitingText.gameObject.SetActive(hand == null && table.started);
+            if (hand == null && table.started)
             {
                 int players = table.seats.FindAll(s => s != null).Count;
                 waitingText.text = players < 2
                     ? $"Waiting for players...\nShare code <b>{table.code}</b> with friends"
-                    : "Next hand starting...";
+                    : table.handNumber == 0 ? "Everyone's here!\nDealing the first hand..." : "Next hand starting...";
             }
+        }
+
+        private void RenderWaitingRoom(TableState state)
+        {
+            if (state.started)
+            {
+                if (waitingRoom.IsOpen) UIAnim.Punch(waitingText.transform, 0.2f); // the game is on
+                waitingRoom.Hide();
+                return;
+            }
+            bool isHost = state.hostId == state.you?.playerId;
+            waitingRoom.Show(state, isHost, InviteLink.Build(state.code) != null);
         }
 
         private void RenderActionBar(TableState state, HandState hand)
@@ -218,11 +256,33 @@ namespace Poker.UI.Game
         private void CopyCode()
         {
             if (table == null) return;
-            GUIUtility.systemCopyBuffer = table.code;
+            ShareUtil.Copy(table.code);
             toast.Show($"Code {table.code} copied - share it with friends");
         }
 
+        private void CopyInviteLink()
+        {
+            string link = table != null ? InviteLink.Build(table.code) : null;
+            if (link == null) { CopyCode(); return; }
+            ShareUtil.Copy(link);
+            toast.Show("Invite link copied - friends who open it join this table");
+        }
+
+        private void ShareInvite()
+        {
+            if (table == null) return;
+            string message = $"Join my poker table \"{table.name}\"! Room code: {table.code}";
+            bool sheetOpened = ShareUtil.Share("Play poker with me", message, InviteLink.Build(table.code));
+            if (!sheetOpened) toast.Show("Invite copied - paste it to your friends");
+        }
+
         private void OnActionRejected(string reason) => toast.Show(reason);
+
+        private void OnServerError(string message)
+        {
+            toast.Show(message);
+            if (table != null && !table.started) RenderWaitingRoom(table); // re-enable "Start now" after a refusal
+        }
 
         private void OnAuthRejected()
         {
@@ -232,8 +292,15 @@ namespace Poker.UI.Game
 
         // ---------- Helpers ----------
 
-        private static int ScreenIndex(int serverSeat, int mySeat, int seatCount) =>
-            (serverSeat - mySeat + seatCount) % seatCount;
+        private static int[] Layout(int seatCount) => SeatLayouts[Mathf.Clamp(seatCount, 0, SeatLayouts.Length - 1)];
+
+        /// <summary>Screen position of a server seat, with our own seat at the bottom.</summary>
+        private static int ScreenIndex(int serverSeat, int mySeat, int seatCount)
+        {
+            int[] layout = Layout(seatCount);
+            int relative = (serverSeat - mySeat + seatCount) % seatCount;
+            return layout[Mathf.Min(relative, layout.Length - 1)];
+        }
 
         private static string StageLabel(string stage) => stage switch
         {
@@ -247,6 +314,8 @@ namespace Poker.UI.Game
 
         // Right-click the component header in the Inspector (Play mode) to preview the overlays.
         [ContextMenu("Preview/Sample table")] private void PreviewTable() => Render(GamePreviewData.Create());
+        [ContextMenu("Preview/Waiting room (4 seats)")] private void PreviewWaiting() => Render(GamePreviewData.CreateWaitingRoom(4));
+        [ContextMenu("Preview/Heads-up (2 seats)")] private void PreviewHeadsUp() => Render(GamePreviewData.CreateWaitingRoom(2, started: true));
         [ContextMenu("Preview/Win screen")] private void PreviewWin() => resultPanel.ShowWin(640, "Full House", new List<string> { "Kh", "Kd", "Ks", "7c", "7h" });
         [ContextMenu("Preview/Lose screen")] private void PreviewLoss() => resultPanel.ShowLoss("Maya", 640, "Flush", new List<string> { "Ah", "Jh", "9h", "5h", "2h" });
         [ContextMenu("Preview/Out of chips")] private void PreviewBusted() => resultPanel.ShowBusted(GameRules.StartingChips);

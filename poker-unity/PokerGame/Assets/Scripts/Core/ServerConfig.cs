@@ -12,6 +12,11 @@ namespace Poker.Core
         [Tooltip("Base URL of poker-server, including protocol. e.g. http://localhost:3000")]
         public string serverUrl = "http://localhost:3000";
 
+        [Tooltip("Web address of the WebGL build, used for invite links shared from non-WebGL builds " +
+                 "(e.g. https://example.com/poker/). WebGL builds use their own page address. " +
+                 "Leave empty to share the room code only.")]
+        public string inviteBaseUrl = "";
+
         [Tooltip("Log every Socket.IO event to the console.")]
         public bool logNetworkEvents = true;
 

@@ -55,9 +55,11 @@ namespace Poker.Network
         {
             public string code;
             public string name;
+            public string mode; // see TableModes
             public int players;
             public int maxSeats;
             public string blinds;
+            public bool started; // false = still in the waiting room
             public bool inHand;
         }
 
@@ -84,6 +86,9 @@ namespace Poker.Network
         {
             public string code;
             public string name;
+            public string mode; // see TableModes
+            public bool started; // false = waiting room: hands begin once every seat is taken
+            public string hostId; // the player who may start the game early
             public int maxSeats;
             public int smallBlind;
             public int bigBlind;
@@ -165,6 +170,8 @@ namespace Poker.Network
         public class CreateTableRequest
         {
             public string tableName;
+            public string mode; // see TableModes
+            public int maxSeats; // GameRules.MinSeats..MaxSeats
         }
 
         [Serializable]

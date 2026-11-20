@@ -387,33 +387,60 @@ namespace Poker.EditorTools
 
             // Left column: create, join, how it works
             var create = Panel(canvas, "CreateCard", Theme.Panel, 24f);
-            create.rectTransform.At(-590, 215, 640, 270);
-            MakeText(create.transform, "Title", "Create a table", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 85, 560, 46);
-            MakeText(create.transform, "Hint", "Start a new table and invite friends with its code.", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 40, 560, 32);
+            create.rectTransform.At(-590, 225, 640, 380);
+            MakeText(create.transform, "Title", "Create a table", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 150, 560, 46);
+
+            // Who you play with
+            var modeRow = Node("ModeGroup", create.transform).At(0, 84, 560, 62);
+            var botsButton = MakeButton(modeRow, "BotsButton", "Play vs bots", Theme.PanelLight, Theme.Text, 24);
+            botsButton.GetComponent<RectTransform>().At(-142, 0, 274, 60);
+            var friendsButton = MakeButton(modeRow, "FriendsButton", "Play with friends", Theme.PanelLight, Theme.Text, 24);
+            friendsButton.GetComponent<RectTransform>().At(142, 0, 274, 60);
+            var modeGroup = modeRow.gameObject.AddComponent<OptionGroup>();
+            WireArray(modeGroup, "options", new Object[] { botsButton, friendsButton });
+
+            // Table size
+            MakeText(create.transform, "PlayersLabel", "Players", 24, Theme.Muted, TextAlignmentOptions.Left, bold: true)
+                .rectTransform.At(-215, 10, 130, 40);
+            var seatRow = Node("SeatGroup", create.transform).At(70, 10, 420, 56);
+            int seatChoices = GameRules.MaxSeats - GameRules.MinSeats + 1;
+            var seatButtons = new Object[seatChoices];
+            for (int i = 0; i < seatChoices; i++)
+            {
+                var b = MakeButton(seatRow, $"Seats{GameRules.MinSeats + i}", (GameRules.MinSeats + i).ToString(), Theme.PanelLight, Theme.Text, 26, 14f);
+                b.GetComponent<RectTransform>().At((i - (seatChoices - 1) / 2f) * 84, 0, 72, 52);
+                seatButtons[i] = b;
+            }
+            var seatGroup = seatRow.gameObject.AddComponent<OptionGroup>();
+            WireArray(seatGroup, "options", seatButtons);
+
+            var modeHint = MakeText(create.transform, "ModeHint", "", 21, Theme.Muted, TextAlignmentOptions.Left);
+            modeHint.rectTransform.At(0, -54, 560, 56);
+
             var tableName = MakeInput(create.transform, "TableNameInput", "Table name (optional)");
-            tableName.GetComponent<RectTransform>().At(-95, -50, 370, 70);
+            tableName.GetComponent<RectTransform>().At(-95, -132, 370, 70);
             tableName.characterLimit = 24;
             var createButton = MakeButton(create.transform, "CreateButton", "Create", Theme.Gold, Theme.Dark, 28);
-            createButton.GetComponent<RectTransform>().At(195, -50, 170, 70);
+            createButton.GetComponent<RectTransform>().At(195, -132, 170, 70);
 
             var join = Panel(canvas, "JoinCard", Theme.Panel, 24f);
-            join.rectTransform.At(-590, -85, 640, 250);
-            MakeText(join.transform, "Title", "Join with a code", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 75, 560, 46);
-            MakeText(join.transform, "Hint", "Got a 5-letter code from a friend?", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 30, 560, 32);
+            join.rectTransform.At(-590, -105, 640, 220);
+            MakeText(join.transform, "Title", "Join with a code", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 66, 560, 46);
+            MakeText(join.transform, "Hint", "Got a 5-letter room code or invite from a friend?", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 24, 560, 32);
             var code = MakeInput(join.transform, "CodeInput", "ABCDE", 34);
-            code.GetComponent<RectTransform>().At(-95, -50, 370, 70);
+            code.GetComponent<RectTransform>().At(-95, -48, 370, 70);
             code.textComponent.fontStyle = FontStyles.Bold;
             code.textComponent.characterSpacing = 12;
             code.characterLimit = 5;
             var joinButton = MakeButton(join.transform, "JoinButton", "Join", Theme.Green, Theme.Dark, 28);
-            joinButton.GetComponent<RectTransform>().At(195, -50, 170, 70);
+            joinButton.GetComponent<RectTransform>().At(195, -48, 170, 70);
 
             var how = Panel(canvas, "HowItWorks", Theme.Panel.WithAlpha(0.6f), 24f);
-            how.rectTransform.At(-590, -330, 640, 200);
-            MakeText(how.transform, "Title", "How it works", 26, Theme.Gold, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 65, 560, 36);
+            how.rectTransform.At(-590, -337, 640, 176);
+            MakeText(how.transform, "Title", "How it works", 26, Theme.Gold, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 56, 560, 36);
             MakeText(how.transform, "Body",
                 "•  Everyone starts with 1,000 virtual chips\n•  No real money and no purchases, ever\n•  Each turn has a 30-second timer",
-                22, Theme.Muted, TextAlignmentOptions.TopLeft).rectTransform.At(0, -25, 560, 120);
+                22, Theme.Muted, TextAlignmentOptions.TopLeft).rectTransform.At(0, -22, 560, 100);
 
             // Right: open tables
             var tables = Panel(canvas, "TablesPanel", Theme.Panel, 24f);
@@ -432,6 +459,9 @@ namespace Poker.EditorTools
             var controller = AddController<LobbyController>("LobbyController");
             Wire(controller, "welcomeText", welcome);
             Wire(controller, "logoutButton", logout);
+            Wire(controller, "modeGroup", modeGroup);
+            Wire(controller, "seatGroup", seatGroup);
+            Wire(controller, "modeHintText", modeHint);
             Wire(controller, "tableNameInput", tableName);
             Wire(controller, "createButton", createButton);
             Wire(controller, "codeInput", code);
@@ -502,6 +532,8 @@ namespace Poker.EditorTools
             var seats = new SeatView[SeatPositions.Length];
             for (int i = 0; i < seats.Length; i++) seats[i] = BuildSeat(seatsRoot, i);
 
+            var waitingRoom = BuildWaitingRoom(canvas);
+
             // Header: table info + code (left), connection + leave (right)
             var header = Panel(canvas, "TableInfo", Theme.Dark.WithAlpha(0.8f), 22f);
             header.rectTransform.Pin(new Vector2(0f, 1f), 28, -24, 600, 112);
@@ -538,6 +570,7 @@ namespace Poker.EditorTools
             Wire(controller, "potRoot", pot.gameObject);
             Wire(controller, "stageText", stage);
             Wire(controller, "waitingText", waiting);
+            Wire(controller, "waitingRoom", waitingRoom);
             Wire(controller, "actionBar", actionBar);
             Wire(controller, "resultPanel", result);
             Wire(controller, "toast", toast);
@@ -682,6 +715,70 @@ namespace Poker.EditorTools
             Wire(view, "raiseInput", amount);
             Wire(view, "halfPotButton", halfPot);
             Wire(view, "potButton", potButton);
+            return view;
+        }
+
+        /// <summary>
+        /// Centre panel shown while a play-with-friends table fills up. The seats around
+        /// it stay visible, so players see friends sit down as they join.
+        /// </summary>
+        private static WaitingRoomPanel BuildWaitingRoom(Transform canvas)
+        {
+            var root = Node("WaitingRoom", canvas).At(0, 0, 860, 440);
+            var group = Group(root, 0f);
+            var glow = Img(root, "Glow", UISprites.Glow, Theme.Gold.WithAlpha(0.18f));
+            glow.rectTransform.At(0, 0, 1300, 800);
+            Panel(root, "Background", Theme.Dark.WithAlpha(0.93f), 30f).rectTransform.Fill();
+            Panel(root, "HeaderBar", Theme.Gold, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 260, 12);
+
+            var title = MakeText(root, "Title", "WAITING FOR PLAYERS", 32, Theme.Gold, bold: true);
+            title.rectTransform.At(0, 168, 780, 44);
+            title.characterSpacing = 4;
+            var status = MakeText(root, "Status", "1 of 4 players at the table", 26, Theme.Text);
+            status.rectTransform.At(0, 124, 780, 36);
+
+            var codeBox = Panel(root, "CodeBox", Theme.Input, 18f);
+            codeBox.rectTransform.At(0, 48, 340, 96);
+            MakeText(codeBox.transform, "Label", "ROOM CODE", 16, Theme.Muted, bold: true).rectTransform.At(0, 30, 300, 20);
+            var code = MakeText(codeBox.transform, "Code", "ABCDE", 54, Theme.Gold, bold: true);
+            code.rectTransform.At(0, -10, 320, 62);
+            code.characterSpacing = 14;
+
+            // Buttons share the row and stay centred when "Copy link" is hidden.
+            var row = Node("Buttons", root).At(0, -46, 800, 62);
+            var layout = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 20;
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = layout.childControlHeight = true;
+            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+            Button RowButton(string name, string label, Color bg, Color fg)
+            {
+                var b = MakeButton(row, name, label, bg, fg, 24);
+                var le = b.gameObject.AddComponent<LayoutElement>();
+                le.preferredWidth = 230;
+                le.preferredHeight = 62;
+                return b;
+            }
+            var copyCode = RowButton("CopyCodeButton", "Copy code", Theme.PanelLight, Theme.Text);
+            var copyLink = RowButton("CopyLinkButton", "Copy invite link", Theme.PanelLight, Theme.Text);
+            var share = RowButton("ShareButton", "Share invite", Theme.Blue, Color.white);
+
+            var footer = MakeText(root, "Footer", "Starts when 3 more players join.", 22, Theme.Muted);
+            footer.rectTransform.At(0, -116, 780, 34);
+            var start = MakeButton(root, "StartButton", "Start now", Theme.Green, Theme.Dark, 28);
+            start.GetComponent<RectTransform>().At(0, -174, 300, 64);
+
+            var view = root.gameObject.AddComponent<WaitingRoomPanel>();
+            Wire(view, "group", group);
+            Wire(view, "card", root);
+            Wire(view, "statusText", status);
+            Wire(view, "codeText", code);
+            Wire(view, "footerText", footer);
+            Wire(view, "copyCodeButton", copyCode);
+            Wire(view, "copyLinkButton", copyLink);
+            Wire(view, "shareButton", share);
+            Wire(view, "startButton", start);
+            root.gameObject.SetActive(false);
             return view;
         }
 

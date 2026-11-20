@@ -78,8 +78,11 @@ namespace Poker.Network
 
         public void RequestTableList() => Emit(PokerEvents.ListTables);
 
-        public void CreateTable(string tableName) =>
-            Emit(PokerEvents.CreateTable, new CreateTableRequest { tableName = tableName });
+        public void CreateTable(string tableName, string mode, int maxSeats) =>
+            Emit(PokerEvents.CreateTable, new CreateTableRequest { tableName = tableName, mode = mode, maxSeats = maxSeats });
+
+        /// <summary>Host only: start a friends table before every seat is filled.</summary>
+        public void StartGame() => Emit(PokerEvents.StartGame);
 
         public void JoinTable(string code) =>
             Emit(PokerEvents.JoinTable, new JoinTableRequest { code = code });

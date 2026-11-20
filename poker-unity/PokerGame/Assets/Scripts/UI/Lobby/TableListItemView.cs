@@ -22,7 +22,9 @@ namespace Poker.UI.Lobby
             bool full = table.players >= table.maxSeats;
 
             nameText.text = table.name;
-            detailsText.text = $"Code {table.code}  •  Blinds {table.blinds}" + (table.inHand ? "  •  Hand in progress" : "");
+            string status = !table.started ? "  •  <color=#22C55E>Waiting for players</color>"
+                : table.inHand ? "  •  Hand in progress" : "";
+            detailsText.text = $"Code {table.code}  •  Blinds {table.blinds}{status}";
             playersText.text = $"{table.players}/{table.maxSeats}";
             joinLabel.text = full ? "Full" : "Join";
             joinButton.interactable = !full;

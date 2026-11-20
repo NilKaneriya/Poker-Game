@@ -56,17 +56,35 @@ Scene flow:
 - **Splash** checks the server, then shows the login form. With *Remember me* ticked,
   the next launch signs in automatically and goes straight to the Lobby.
 - **Lobby** lets you create a table, join one with its 5-letter code, or pick one from
-  the open tables list.
+  the open tables list. When creating, pick who you play with and the table size
+  (2-6 players):
+  - **Play vs bots**: the empty seats fill with bots and the game starts right away.
+    These tables are private (not listed, can't be joined).
+  - **Play with friends**: you get a room code and an invite link. Everyone who joins
+    waits in the waiting room at the table; when the last seat is taken the game
+    starts for everyone at once. The host (creator) can also press *Start now* with
+    2 or more players.
 - **Game** is the table: seats, cards, pot, turn timer, action buttons and the
   win / lose / out-of-chips screens. Playing this scene without a server shows sample
-  data, so the layout can be checked in the Editor.
+  data, so the layout can be checked in the Editor (right-click the GameController
+  component for more previews, e.g. the waiting room).
+
+### Invite links
+Links look like `https://your-site/poker/?room=ABCDE`. Opening one starts the game,
+signs in (or shows the login form) and joins that table directly.
+- WebGL builds use their own page address, so this works with no setup.
+- Other builds share the address set in `ServerConfig > Invite Base Url` (the web
+  address of your WebGL build). Leave it empty to share the room code only.
+- *Share invite* opens the device's share sheet (browser Web Share, Android
+  "Share via"); elsewhere it copies the invite to the clipboard.
 
 ## Testing multiplayer with two or more players
 
-_TBD: full walkthrough._ Short version for now: run the server, then start two or
-more clients (Editor + a build, or several WebGL browser tabs) and sign in with a
-**different account in each**. One player creates a table and shares the 5-letter
-code; the others join with the code or from the table list.
+Run the server, then start two or more clients (Editor + a build, or several WebGL
+browser tabs) and sign in with a **different account in each**. One player creates a
+*Play with friends* table and shares the room code or invite link; the others join
+with the code, the link or from the table list. The game starts when the table is
+full (or when the host presses *Start now*).
 
 Untick *Remember me* when testing several clients on one machine: browser tabs (and
 builds of the same app) share saved settings, so a remembered login would sign every
@@ -76,7 +94,8 @@ Automated checks:
 ```
 cd poker-server
 npm test               # unit tests
-npm run test:client    # smoke test against a running server (login, join, reconnect)
+npm run test:client    # smoke test against a running server (login, join, reconnect,
+                       # waiting room, host start, full-table start, bots tables)
 ```
 
 ## Design decisions
