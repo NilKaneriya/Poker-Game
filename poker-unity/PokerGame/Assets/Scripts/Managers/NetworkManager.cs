@@ -1,0 +1,188 @@
+using System;
+using System.Collections.Generic;
+using Firesplash.GameDevAssets.SocketIO;
+using Newtonsoft.Json;
+using Poker.Core;
+using UnityEngine;
+using static Poker.Core.Constants;
+using static Poker.Network.DataModel;
+
+namespace Poker.Network
+{
+    /// <summary>
+    /// The real-time connection to poker-server (Socket.IO).
+    /// Created once by AppServices and kept across scenes. Scenes subscribe to the
+    /// events below and call the Send methods; they never touch Socket.IO directly.
+    /// All callbacks run on the Unity main thread.
+    /// </summary>
+    [RequireComponent(typeof(SocketIOCommunicator))]
+    public class NetworkManager : MonoBehaviour
+    {
+        public static NetworkManager Instance { get; private set; }
+
+        public event Action<SessionInfo> SessionStarted;
+        public event Action<string> Disconnected;      // reason
+        public event Action<string> ConnectFailed;     // reason
+        public event Action AuthRejected;              // login token no longer valid
+        public event Action<List<TableSummary>> TableListReceived;
+        public event Action<TableState> TableStateReceived;
+        public event Action<string> ActionRejected;
+        public event Action<string> ServerErrorReceived;
+
+        public bool IsConnected => sio != null && sio.Instance.IsConnected();
+        public bool HasConnectedOnce { get; private set; }
+        public TableState CurrentTable { get; private set; }
+
+        private SocketIOCommunicator sio;
+        private ServerConfig config;
+
+        private void Awake()
+        {
+            Instance = this;
+            config = ServerConfig.Load();
+            sio = GetComponent<SocketIOCommunicator>();
+            RegisterHandlers();
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        // ---------- Connection ----------
+
+        /// <summary>Open the socket using the current login token (log in first).</summary>
+        public void Connect()
+        {
+            var auth = AuthManager.Instance;
+            if (auth == null || !auth.IsLoggedIn)
+            {
+                Debug.LogWarning("[Network] Connect called before login.");
+                return;
+            }
+
+            var payload = new SIOAuthPayload();
+            payload.AddElement("token", auth.Token); // read by the server as socket.handshake.auth.token
+            Log($"Connecting to {config.serverUrl}");
+            sio.Instance.Connect(config.serverUrl, true, payload);
+        }
+
+        public void Disconnect()
+        {
+            CurrentTable = null;
+            HasConnectedOnce = false;
+            sio.Instance.Close();
+        }
+
+        // ---------- Client -> Server ----------
+
+        public void RequestTableList() => Emit(PokerEvents.ListTables);
+
+        public void CreateTable(string tableName) =>
+            Emit(PokerEvents.CreateTable, new CreateTableRequest { tableName = tableName });
+
+        public void JoinTable(string code) =>
+            Emit(PokerEvents.JoinTable, new JoinTableRequest { code = code });
+
+        public void LeaveTable()
+        {
+            Emit(PokerEvents.LeaveTable);
+            CurrentTable = null;
+        }
+
+        /// <summary>For raises, amount is the total bet to raise to on this street.</summary>
+        public void SendAction(string action, int amount = 0) =>
+            Emit(PokerEvents.PlayerAction, new PlayerActionRequest { action = action, amount = amount });
+
+        public void Rebuy() => Emit(PokerEvents.Rebuy);
+
+        // ---------- Server -> Client ----------
+
+        private void RegisterHandlers()
+        {
+            var io = sio.Instance;
+
+            io.On(PokerEvents.SocketConnect, _ =>
+            {
+                HasConnectedOnce = true;
+                Log("Socket connected");
+            });
+            io.On(PokerEvents.SocketConnectError, reason =>
+            {
+                Debug.LogWarning($"[Network] Connect error: {reason}");
+                if (reason != null && reason.Contains("unauthorized"))
+                {
+                    // Token expired or revoked: stop retrying and send the player to log in again.
+                    sio.Instance.Close();
+                    AuthRejected?.Invoke();
+                    return;
+                }
+                ConnectFailed?.Invoke(reason);
+            });
+            io.On(PokerEvents.SocketDisconnect, reason =>
+            {
+                Log($"Disconnected: {reason}");
+                Disconnected?.Invoke(reason);
+            });
+
+            On<SessionInfo>(PokerEvents.Session, session => SessionStarted?.Invoke(session));
+            On<List<TableSummary>>(PokerEvents.TableList, list => TableListReceived?.Invoke(list));
+            On<TableState>(PokerEvents.TableState, table =>
+            {
+                CurrentTable = table;
+                TableStateReceived?.Invoke(table);
+            });
+            On<ActionRejectedInfo>(PokerEvents.ActionRejected, info => ActionRejected?.Invoke(info.reason));
+            On<ServerError>(PokerEvents.Error, err => ServerErrorReceived?.Invoke(err.message));
+        }
+
+        // ---------- Helpers ----------
+
+        /// <summary>Subscribe to an event and parse its JSON payload into T.</summary>
+        private void On<T>(string eventName, Action<T> handler)
+        {
+            sio.Instance.On(eventName, payload =>
+            {
+                Log($"<- {eventName} {payload}");
+                T data;
+                try
+                {
+                    data = string.IsNullOrEmpty(payload) ? default : JsonConvert.DeserializeObject<T>(payload);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[Network] Failed to parse '{eventName}': {e.Message}\n{payload}");
+                    return;
+                }
+                handler(data);
+            });
+        }
+
+        private void Emit(string eventName)
+        {
+            if (!EnsureConnected(eventName)) return;
+            Log($"-> {eventName}");
+            sio.Instance.Emit(eventName);
+        }
+
+        private void Emit(string eventName, object payload)
+        {
+            if (!EnsureConnected(eventName)) return;
+            string json = JsonConvert.SerializeObject(payload);
+            Log($"-> {eventName} {json}");
+            sio.Instance.Emit(eventName, json, false); // false = payload is JSON, not plain text
+        }
+
+        private bool EnsureConnected(string eventName)
+        {
+            if (IsConnected) return true;
+            Debug.LogWarning($"[Network] Not connected; dropped '{eventName}'");
+            return false;
+        }
+
+        private void Log(string msg)
+        {
+            if (config.logNetworkEvents) Debug.Log($"[Network] {msg}");
+        }
+    }
+}
