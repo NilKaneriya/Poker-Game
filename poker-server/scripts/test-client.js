@@ -7,7 +7,7 @@ const { io } = require('socket.io-client');
 const URL = process.env.SERVER_URL || 'http://localhost:3000';
 const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
 const check = (cond, msg) => { if (!cond) fail(msg); };
-setTimeout(() => fail('timed out'), 8000);
+setTimeout(() => fail('timed out'), 20000);
 
 const once = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
 
@@ -18,6 +18,79 @@ async function post(path, body, token) {
     body: JSON.stringify(body || {}),
   });
   return { status: res.status, body: await res.json() };
+}
+
+/** Wait for the next tableState that passes `test` (states arrive often). */
+const stateWhere = (socket, test) =>
+  new Promise((resolve) => {
+    const handler = (state) => {
+      if (!test(state)) return;
+      socket.off('tableState', handler);
+      resolve(state);
+    };
+    socket.on('tableState', handler);
+  });
+
+/**
+ * Play-with-friends and play-with-bots tables:
+ * - a friends table waits until every seat is taken, then the game starts by itself
+ * - only the host can start early, and only with 2+ players
+ * - a bots table fills its empty seats with bots, starts at once and can't be joined
+ */
+async function waitingRoomChecks(alice, bob) {
+  const errorFrom = (socket) => once(socket, 'errorMessage');
+
+  // Friends table for 3: Alice hosts, Bob joins, the game must not start yet.
+  alice.emit('createTable', { tableName: 'Friends', mode: 'friends', maxSeats: 3 });
+  const room = await stateWhere(alice, (s) => s.name === 'Friends');
+  check(room.mode === 'friends' && room.maxSeats === 3 && room.seats.length === 3, 'friends table has wrong mode/size');
+  check(room.started === false && room.hostId === room.you.playerId, 'new friends table should wait, hosted by Alice');
+
+  bob.emit('joinTable', { code: room.code });
+  const both = await stateWhere(bob, (s) => s.code === room.code);
+  check(both.seats.filter(Boolean).length === 2 && !both.started && !both.hand, 'game started before the table was full');
+  console.log(`Friends table ${room.code}: 2/3 seated, still waiting`);
+
+  // Non-host can't start it.
+  bob.emit('startGame');
+  const denied = await errorFrom(bob);
+  check(/host/i.test(denied.message), 'non-host was allowed to start: ' + denied.message);
+
+  // Host starts early with 2 of 3 seats: the first hand gets dealt to both.
+  alice.emit('startGame');
+  const dealt = await stateWhere(bob, (s) => s.code === room.code && s.started && s.hand);
+  check(dealt.hand.yourCards.length === 2, 'Bob was not dealt in after the host started');
+  console.log('Host started early; first hand dealt');
+
+  // Full-table auto start: a 2-seat table starts as soon as the second player sits.
+  alice.emit('createTable', { tableName: 'Heads up', mode: 'friends', maxSeats: 2 });
+  const duel = await stateWhere(alice, (s) => s.name === 'Heads up');
+  check(!duel.started, '2-seat table started with 1 player');
+  bob.emit('joinTable', { code: duel.code });
+  const full = await stateWhere(alice, (s) => s.code === duel.code && s.started);
+  check(full.seats.every(Boolean), 'started without every seat filled');
+  await stateWhere(alice, (s) => s.code === duel.code && s.hand);
+  console.log(`Table ${duel.code} started by itself when the last seat was taken`);
+
+  // Bots table for 4: Alice + 3 bots, starts right away, private.
+  alice.emit('createTable', { tableName: 'Bots', mode: 'bots', maxSeats: 4 });
+  const bots = await stateWhere(alice, (s) => s.name === 'Bots');
+  const seated = bots.seats.filter(Boolean);
+  check(seated.length === 4 && seated.filter((s) => s.isBot).length === 3, 'bots table not filled with 3 bots');
+  check(bots.started, 'bots table should start at once');
+  bob.emit('joinTable', { code: bots.code });
+  const privateErr = await errorFrom(bob);
+  check(/bots/i.test(privateErr.message), 'joined a private bots table');
+  const list = await new Promise((resolve) => { bob.once('tableList', resolve); bob.emit('listTables'); });
+  check(!list.some((t) => t.code === bots.code), 'bots table shows in the open list');
+  console.log(`Bots table ${bots.code}: 1 human + 3 bots, private`);
+
+  // Bad sizes fall back to the 6-seat default.
+  bob.emit('createTable', { mode: 'friends', maxSeats: 9 });
+  const fallback = await stateWhere(bob, (s) => s.code !== duel.code && s.hostId === s.you.playerId);
+  check(fallback.maxSeats === 6, 'invalid seat count was not clamped');
+  alice.emit('leaveTable');
+  bob.emit('leaveTable');
 }
 
 (async () => {
@@ -71,6 +144,8 @@ async function post(path, body, token) {
   check(resumed.playerId === bobLogin.body.playerId, 'reconnect gave a different player');
   check(back.you.seat !== -1, 'seat lost after reconnect');
   console.log(`Bob reconnected to seat ${back.you.seat}`);
+
+  await waitingRoomChecks(alice, bob2);
 
   // Logout revokes the token.
   await post('/auth/logout', {}, bobLogin.body.token);

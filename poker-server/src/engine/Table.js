@@ -1,4 +1,5 @@
 const HoldemHand = require('./HoldemHand');
+const { TABLE_MODES } = require('./constants');
 
 /**
  * A poker table: seats, chip stacks, the dealer button and the current hand.
@@ -8,9 +9,12 @@ const HoldemHand = require('./HoldemHand');
  * hand runs they are synced from the hand after every action.
  */
 class Table {
-  constructor({ code, name, maxSeats, smallBlind, bigBlind, startingChips }) {
+  constructor({ code, name, maxSeats, smallBlind, bigBlind, startingChips, mode = TABLE_MODES.FRIENDS, hostId = null }) {
     this.code = code;
     this.name = name;
+    this.mode = mode;
+    this.hostId = hostId;  // who created the table; may start a friends game early
+    this.started = false;  // false = waiting room (friends tables until all seats are taken)
     this.maxSeats = maxSeats;
     this.smallBlind = smallBlind;
     this.bigBlind = bigBlind;
@@ -59,6 +63,8 @@ class Table {
       this.syncChips();
     }
     this.seats[seat] = null;
+    // The host left: hand the role to the next human still seated.
+    if (this.hostId === playerId) this.hostId = this.players.find((p) => !p.isBot)?.playerId ?? null;
   }
 
   /** Players with chips who can be dealt into the next hand. Busted players watch. */
@@ -142,6 +148,9 @@ class Table {
     return {
       code: this.code,
       name: this.name,
+      mode: this.mode,
+      started: this.started,
+      hostId: this.hostId,
       maxSeats: this.maxSeats,
       smallBlind: this.smallBlind,
       bigBlind: this.bigBlind,

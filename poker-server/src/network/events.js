@@ -1,9 +1,10 @@
 // Socket.IO event names. Mirrored in Unity: Assets/Scripts/Network/PokerEvents.cs
 module.exports = Object.freeze({
   // Client -> Server
-  CREATE_TABLE: 'createTable', // { tableName }
+  CREATE_TABLE: 'createTable', // { tableName, mode: 'bots' | 'friends', maxSeats: 2..6 }
   JOIN_TABLE: 'joinTable', //     { code }
   LEAVE_TABLE: 'leaveTable',
+  START_GAME: 'startGame', //     host only: start a friends table before every seat is filled
   LIST_TABLES: 'listTables',
   PLAYER_ACTION: 'playerAction', // { action, amount? }  amount = total bet to raise to
   REBUY: 'rebuy', //               out of chips: restart with the starting stack

@@ -21,7 +21,7 @@ setTimeout(() => fail('timed out'), 60000);
   const socket = io(URL, { auth: { token } });
   socket.on('actionRejected', ({ reason }) => fail(`server rejected our move: ${reason}`));
   await new Promise((r) => socket.once('session', r));
-  socket.emit('createTable', { tableName: 'Bot test' });
+  socket.emit('createTable', { tableName: 'Bot test', mode: 'bots', maxSeats: Number(process.env.SEATS || 3) });
 
   let handsSeen = 0;
   let lastLine = '';

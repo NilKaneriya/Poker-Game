@@ -11,6 +11,7 @@ module.exports = {
     : '*',
 
   table: {
+    minSeats: 2, // the host picks the table size in this range
     maxSeats: 6,
     startingChips: 1000,
     smallBlind: num(process.env.SMALL_BLIND, 10),

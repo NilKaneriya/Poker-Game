@@ -15,6 +15,14 @@ const ACTIONS = Object.freeze({
   ALL_IN: 'allIn',
 });
 
+// How a table is filled.
+//   bots    - one human against computer players; starts right away
+//   friends - humans only; waits until every seat is taken (or the host starts it)
+const TABLE_MODES = Object.freeze({
+  BOTS: 'bots',
+  FRIENDS: 'friends',
+});
+
 // Higher value beats lower value.
 const HAND_RANKS = Object.freeze({
   HIGH_CARD: 0,
@@ -42,4 +50,4 @@ const HAND_NAMES = Object.freeze([
   'Royal Flush',
 ]);
 
-module.exports = { STAGES, ACTIONS, HAND_RANKS, HAND_NAMES };
+module.exports = { STAGES, ACTIONS, TABLE_MODES, HAND_RANKS, HAND_NAMES };

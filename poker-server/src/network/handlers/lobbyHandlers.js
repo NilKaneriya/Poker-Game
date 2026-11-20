@@ -1,14 +1,24 @@
 const EVENTS = require('../events');
+const config = require('../../config');
+const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
 const { tableRoom, sendTableList } = require('../broadcast');
 const { runnerFor, removeRunner } = require('../TableRunner');
 
 const MAX_TABLE_NAME_LENGTH = 24;
+const VALID_MODES = new Set(Object.values(TABLE_MODES));
 
 function cleanTableName(value) {
   const name = typeof value === 'string' ? value.trim().slice(0, MAX_TABLE_NAME_LENGTH) : '';
   return name || null;
+}
+
+const cleanMode = (value) => (VALID_MODES.has(value) ? value : TABLE_MODES.FRIENDS);
+
+function cleanSeatCount(value) {
+  const { minSeats, maxSeats } = config.table;
+  return Number.isInteger(value) && value >= minSeats && value <= maxSeats ? value : maxSeats;
 }
 
 module.exports = (io, socket) => {
@@ -44,9 +54,15 @@ module.exports = (io, socket) => {
   socket.on(EVENTS.LIST_TABLES, () => socket.emit(EVENTS.TABLE_LIST, tables.list()));
 
   socket.on(EVENTS.CREATE_TABLE, (payload) => {
-    const { tableName } = payload || {};
+    const { tableName, mode, maxSeats } = payload || {};
     leaveCurrentTable();
-    const table = tables.create(cleanTableName(tableName));
+    const table = tables.create({
+      name: cleanTableName(tableName),
+      mode: cleanMode(mode),
+      maxSeats: cleanSeatCount(maxSeats),
+      hostId: playerId,
+    });
+    log.info(`${name} created ${table.mode} table ${table.code} (${table.maxSeats} seats)`);
     seat(table);
   });
 
@@ -60,10 +76,18 @@ module.exports = (io, socket) => {
       socket.join(tableRoom(table.code));
       return runnerFor(io, table).update();
     }
+    if (table.mode === TABLE_MODES.BOTS) return fail('That table is a private game against bots');
     if (table.isFull) return fail('Table is full');
 
     leaveCurrentTable();
     seat(table);
+  });
+
+  socket.on(EVENTS.START_GAME, () => {
+    const table = tables.findByPlayer(playerId);
+    if (!table) return fail('You are not at a table');
+    const result = runnerFor(io, table).startEarly(playerId);
+    if (!result.ok) fail(result.error);
   });
 
   socket.on(EVENTS.LEAVE_TABLE, leaveCurrentTable);

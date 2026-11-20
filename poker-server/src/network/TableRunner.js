@@ -5,8 +5,9 @@ const { sendTableState, sendTableList } = require('./broadcast');
 const { buildPlayerView } = require('./playerView');
 const { BotPlayer, LEVELS } = require('../bots/BotPlayer');
 
+const { TABLE_MODES } = require('../engine/constants');
+
 const BOT_NAMES = ['Ava', 'Max', 'Zoe', 'Rex', 'Mia', 'Kai'];
-const BOTS_WITH_ONE_HUMAN = 2; // one human + 2 bots = a 3-player table
 
 /**
  * Runs one table over time: deals hands, runs the turn timer, lets bots act,
@@ -46,14 +47,41 @@ class TableRunner {
 
     if (!hand) {
       this.manageBots();
-      if (this.table.canStartHand()) this.schedule(config.timing.nextHandDelayMs, () => this.startHand());
+      this.startWhenReady();
+      if (this.table.started && this.table.canStartHand()) {
+        this.schedule(config.timing.nextHandDelayMs, () => this.startHand());
+      }
     }
 
     this.broadcast();
   }
 
+  /**
+   * Waiting room: a friends table opens once every seat is taken, so everyone
+   * moves to the table together. A bots table is full of bots, so it opens at once.
+   */
+  startWhenReady() {
+    if (this.table.started || !this.table.isFull) return;
+    this.table.started = true;
+    log.info(`Table ${this.table.code}: all ${this.table.maxSeats} seats taken, game starting`);
+    sendTableList(this.io);
+  }
+
+  /** The host starts a friends table before it is full. Returns { ok, error }. */
+  startEarly(playerId) {
+    const table = this.table;
+    if (table.started) return { ok: false, error: 'The game has already started' };
+    if (table.hostId !== playerId) return { ok: false, error: 'Only the host can start the game' };
+    if (table.eligiblePlayers().length < 2) return { ok: false, error: 'You need at least 2 players to start' };
+    table.started = true;
+    log.info(`Table ${table.code}: host started the game with ${table.players.length}/${table.maxSeats} players`);
+    this.update();
+    sendTableList(this.io);
+    return { ok: true };
+  }
+
   startHand() {
-    if (!this.table.canStartHand()) return this.update();
+    if (!this.table.started || !this.table.canStartHand()) return this.update();
     this.table.startHand();
     log.info(`Table ${this.table.code}: hand #${this.table.handNumber} started`);
     this.update();
@@ -123,19 +151,15 @@ class TableRunner {
 
   // ---------- Bots ----------
 
-  /**
-   * Fewer than 2 humans: fill with bots so there's a game.
-   * 2+ humans: bots leave (between hands only).
-   */
+  /** Bots tables: every empty seat gets a bot. Friends tables never have bots. */
   manageBots() {
-    const humans = this.table.players.filter((p) => !p.isBot);
+    if (this.table.mode !== TABLE_MODES.BOTS) return;
 
-    if (humans.length >= 2) {
-      for (const id of [...this.bots.keys()]) this.removeBot(id);
-      return;
-    }
-    if (humans.length === 1) {
-      while (this.bots.size < BOTS_WITH_ONE_HUMAN && !this.table.isFull) this.addBot();
+    const humans = this.table.players.filter((p) => !p.isBot);
+    if (humans.length > 0) {
+      while (!this.table.isFull) {
+        if (!this.addBot()) break;
+      }
     }
     // Bots never get stuck spectating: give a broke bot a fresh stack.
     for (const id of this.bots.keys()) {
@@ -150,14 +174,10 @@ class TableRunner {
     const level = LEVELS[(offset + index) % LEVELS.length];
     const name = `${BOT_NAMES[(offset + index) % BOT_NAMES.length]} (${level})`;
     const bot = new BotPlayer({ playerId: `bot-${this.table.code}-${Date.now()}-${index}`, name, level });
-    if (this.table.addPlayer({ playerId: bot.playerId, name, isBot: true }) === -1) return;
+    if (this.table.addPlayer({ playerId: bot.playerId, name, isBot: true }) === -1) return false;
     this.bots.set(bot.playerId, bot);
     log.info(`Table ${this.table.code}: bot ${name} sat down`);
-  }
-
-  removeBot(playerId) {
-    this.table.removePlayer(playerId);
-    this.bots.delete(playerId);
+    return true;
   }
 
   // ---------- Helpers ----------

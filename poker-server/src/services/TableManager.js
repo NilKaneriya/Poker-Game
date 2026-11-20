@@ -1,5 +1,6 @@
 const { randomInt } = require('crypto');
 const Table = require('../engine/Table');
+const { TABLE_MODES } = require('../engine/constants');
 const config = require('../config');
 
 // No 0/O or 1/I so codes are easy to read out loud.
@@ -19,9 +20,10 @@ class TableManager {
     return code;
   }
 
-  create(name) {
+  /** @param {{ name?: string, mode: string, maxSeats: number, hostId: string }} options */
+  create({ name, mode, maxSeats, hostId }) {
     const code = this.generateCode();
-    const table = new Table({ code, name: name || `Table ${code}`, ...config.table });
+    const table = new Table({ ...config.table, code, name: name || `Table ${code}`, mode, maxSeats, hostId });
     this.tables.set(code, table);
     return table;
   }
@@ -41,15 +43,20 @@ class TableManager {
     return null;
   }
 
+  /** Tables others can join. Games against bots are private, so they are not listed. */
   list() {
-    return [...this.tables.values()].map((t) => ({
-      code: t.code,
-      name: t.name,
-      players: t.players.length,
-      maxSeats: t.maxSeats,
-      blinds: `${t.smallBlind}/${t.bigBlind}`,
-      inHand: Boolean(t.hand),
-    }));
+    return [...this.tables.values()]
+      .filter((t) => t.mode === TABLE_MODES.FRIENDS)
+      .map((t) => ({
+        code: t.code,
+        name: t.name,
+        mode: t.mode,
+        players: t.players.length,
+        maxSeats: t.maxSeats,
+        blinds: `${t.smallBlind}/${t.bigBlind}`,
+        started: t.started,
+        inHand: Boolean(t.hand),
+      }));
   }
 }
 
