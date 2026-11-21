@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test:client": "node scripts/test-client.js",
+    "test:e2e": "node scripts/e2e.js",
     "test": "node --test \"test/**/*.test.js\"",
     "play:bots": "node scripts/play-vs-bots.js"
   },

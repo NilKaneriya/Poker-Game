@@ -7,7 +7,8 @@ const { io } = require('socket.io-client');
 const URL = process.env.SERVER_URL || 'http://localhost:3000';
 const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
 const check = (cond, msg) => { if (!cond) fail(msg); };
-setTimeout(() => fail('timed out'), 20000);
+const GRACE_MS = Number(process.env.TEST_GRACE_MS || 0); // set by test:e2e (matches the server's RECONNECT_GRACE_MS)
+setTimeout(() => fail('timed out'), 45000);
 
 const once = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
 
@@ -93,6 +94,60 @@ async function waitingRoomChecks(alice, bob) {
   bob.emit('leaveTable');
 }
 
+/**
+ * Statistics (the retention feature): sent on connect, and updated after every hand the
+ * player was dealt into. Plays one quick hand against a bot, checking or calling.
+ */
+async function statsChecks(alice) {
+  const autoPlay = (state) => {
+    const hand = state.hand;
+    if (hand?.legal && hand.currentSeat === state.you.seat) {
+      const a = hand.legal.actions;
+      alice.emit('playerAction', { action: a.includes('check') ? 'check' : a.includes('call') ? 'call' : 'allIn' });
+    }
+  };
+  alice.on('tableState', autoPlay);
+  const before = await new Promise((resolve) => { alice.once('stats', resolve); alice.emit('getStats'); });
+  alice.emit('createTable', { tableName: 'Stats', mode: 'bots', maxSeats: 2 });
+  const after = await new Promise((resolve) => {
+    const handler = (s) => { if (s.handsPlayed > before.handsPlayed) { alice.off('stats', handler); resolve(s); } };
+    alice.on('stats', handler);
+  });
+  alice.off('tableState', autoPlay);
+  check(after.handsPlayed === before.handsPlayed + 1, 'hands played did not go up by one');
+  check(after.handsWon >= before.handsWon, 'hands won went down');
+  console.log(`Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`);
+  alice.emit('leaveTable');
+}
+
+/**
+ * A player who disconnects keeps their seat for the grace period, then the seat is freed.
+ * Needs a short RECONNECT_GRACE_MS (test:e2e starts the server with one).
+ */
+async function graceChecks(alice, bob, bobToken) {
+  alice.emit('createTable', { tableName: 'Grace', mode: 'friends', maxSeats: 6 });
+  const room = await stateWhere(alice, (s) => s.name === 'Grace');
+  bob.emit('joinTable', { code: room.code });
+  await stateWhere(alice, (s) => s.code === room.code && s.seats.filter(Boolean).length === 2);
+
+  bob.disconnect();
+  const offline = await stateWhere(alice, (s) => s.code === room.code && s.seats.some((x) => x && !x.connected));
+  check(offline.seats.filter(Boolean).length === 2, 'seat should be kept while the player is away');
+  console.log('Bob disconnected: seat kept and marked offline');
+
+  const freed = await stateWhere(alice, (s) => s.code === room.code && s.seats.filter(Boolean).length === 1);
+  check(freed.seats.filter(Boolean)[0].name === offline.seats.find((x) => x && x.connected).name, 'wrong seat freed');
+  console.log(`Bob did not come back within ${GRACE_MS} ms: seat freed`);
+
+  // Coming back later: no table any more, and the session says so.
+  const bob3 = io(URL, { auth: { token: bobToken } });
+  const session = await once(bob3, 'session');
+  check(session.tableCode === null, 'session should report no table after the seat was freed');
+  console.log('Bob reconnected later: session reports no table');
+  bob3.close();
+  alice.emit('leaveTable');
+}
+
 (async () => {
   const suffix = Date.now().toString(36).slice(-5);
   const password = 'secret123';
@@ -142,10 +197,14 @@ async function waitingRoomChecks(alice, bob) {
   // Server sends session and tableState back to back, so listen for both up front.
   const [resumed, back] = await Promise.all([once(bob2, 'session'), once(bob2, 'tableState')]);
   check(resumed.playerId === bobLogin.body.playerId, 'reconnect gave a different player');
+  check(resumed.tableCode === created.code, 'session should name the table the player is seated at');
   check(back.you.seat !== -1, 'seat lost after reconnect');
   console.log(`Bob reconnected to seat ${back.you.seat}`);
 
   await waitingRoomChecks(alice, bob2);
+  await statsChecks(alice);
+  if (GRACE_MS) await graceChecks(alice, bob2, bobLogin.body.token);
+  else console.log('(skipping reconnect-grace check: run `npm run test:e2e` for the full suite)');
 
   // Logout revokes the token.
   await post('/auth/logout', {}, bobLogin.body.token);
