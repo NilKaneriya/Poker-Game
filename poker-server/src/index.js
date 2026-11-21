@@ -9,6 +9,9 @@ const tables = require('./services/TableManager');
 const authRoutes = require('./network/authRoutes');
 const registerSocketServer = require('./network/socketServer');
 const { serveWebGL } = require('./network/webglHosting');
+const { tableRoom } = require('./network/broadcast');
+const gameEvents = require('./network/gameEvents');
+const { attachChat } = require('./chat');
 
 const app = express();
 app.use(cors({ origin: config.corsOrigin }));
@@ -23,6 +26,13 @@ const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: config.corsOrigin } });
 
 registerSocketServer(io);
+
+// Chat is a separate module: it only gets what it needs from the game, passed in here.
+attachChat(io, {
+  tableOf: (playerId) => tables.findByPlayer(playerId)?.code ?? null,
+  roomOf: tableRoom,
+  gameEvents,
+});
 
 server.listen(config.port, () => {
   log.info(`Poker server listening on http://localhost:${config.port}`);

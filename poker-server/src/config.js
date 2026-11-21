@@ -27,6 +27,14 @@ module.exports = {
   // How long a disconnected player's seat is kept before they are removed.
   reconnectGraceMs: num(process.env.RECONNECT_GRACE_MS, 120000),
 
+  // Table chat (src/chat)
+  chat: {
+    maxLength: 140, //        characters per message
+    historySize: 50, //       messages kept per table (sent to players who join later)
+    rateMax: 5, //            at most this many messages...
+    rateWindowMs: 10000, //   ...in this window, per player
+  },
+
   // Player statistics (hands played/won, biggest pot, best hand)
   statsFile: process.env.STATS_FILE || path.join(__dirname, '..', 'data', 'stats.json'),
 
