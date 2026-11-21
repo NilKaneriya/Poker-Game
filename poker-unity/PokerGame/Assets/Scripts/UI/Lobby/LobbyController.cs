@@ -19,8 +19,7 @@ namespace Poker.UI.Lobby
     public class LobbyController : MonoBehaviour
     {
         [Header("Header")]
-        [SerializeField] private TMP_Text welcomeText;
-        [SerializeField] private Button logoutButton;
+        [SerializeField] private Button logoutButton; // the profile card and settings button run themselves
 
         [Header("Create / join")]
         [SerializeField] private OptionButtonGroup modeGroup;  // buttons in TableModes.LobbyOrder
@@ -72,7 +71,6 @@ namespace Poker.UI.Lobby
                 return;
             }
 
-            welcomeText.text = $"Hi, <b>{Auth.Username}</b>";
             codeInput.characterLimit = GameRules.TableCodeLength;
             codeInput.onValueChanged.AddListener(v => codeInput.SetTextWithoutNotify(v.ToUpperInvariant()));
             codeInput.onSubmit.AddListener(_ => JoinByCode());

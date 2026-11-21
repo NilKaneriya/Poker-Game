@@ -165,14 +165,6 @@ namespace Poker.EditorTools
             WireEnum(music, "track", track);
         }
 
-        /// <summary>"Music" and "Sound" on/off buttons, right-aligned at (x, y) from the anchor.</summary>
-        private static void BuildAudioToggles(Transform parent, Vector2 anchor, float x, float y)
-        {
-            var settings = new[] { SettingToggleButton.Setting.Sound, SettingToggleButton.Setting.Music };
-            for (int i = 0; i < settings.Length; i++)
-                BuildSettingToggle(parent, settings[i], anchor, x - i * 112, y, 104, 48);
-        }
-
         private static Button BuildSettingToggle(Transform parent, SettingToggleButton.Setting setting, Vector2 anchor,
             float x, float y, float w, float h)
         {
@@ -438,11 +430,10 @@ namespace Poker.EditorTools
             title.rectTransform.Pin(new Vector2(0f, 0.5f), 48, 0, 600, 70);
             var logout = MakeButton(top.transform, "LogoutButton", "Log out", Theme.PanelLight, Theme.Text, 22);
             logout.GetComponent<RectTransform>().Pin(new Vector2(1f, 0.5f), -40, 0, 150, 56);
-            var welcome = MakeText(top.transform, "Welcome", "Hi, player", 28, Theme.Text, TextAlignmentOptions.Right);
-            welcome.rectTransform.Pin(new Vector2(1f, 0.5f), -215, 0, 420, 50);
+            var profileCard = ProfileUIBuilder.BuildProfileCard(top.transform, new Vector2(1f, 0.5f), -215, 0);
             var banner = BuildLostBanner(canvas, -110, "Connection lost. Reconnecting...");
-            BuildConnectionStatus(top.transform, new Vector2(1f, 0.5f), -660, 0, banner);
-            BuildAudioToggles(top.transform, new Vector2(1f, 0.5f), -880, 0);
+            BuildConnectionStatus(top.transform, new Vector2(1f, 0.5f), -620, 0, banner);
+            var lobbySettings = ProfileUIBuilder.BuildSettingsButton(top.transform, new Vector2(1f, 0.5f), -840, 0);
 
             // Left column: create, join, how it works
             var create = Panel(canvas, "CreateCard", Theme.Panel, 24f);
@@ -536,10 +527,12 @@ namespace Poker.EditorTools
 
             var toast = BuildToast(canvas, new Vector2(0.5f, 0f), 24);
             BuildBreakReminder(canvas);
+            ProfileUIBuilder.BuildProfilePanel(canvas, profileCard, toast);
+            ProfileUIBuilder.BuildSettingsPanel(canvas, lobbySettings);
+            toast.transform.SetAsLastSibling(); // "Profile saved" shows above the panels
 
             AddSceneMusic(SoundId.MusicLobby);
             var controller = AddController<LobbyController>("LobbyController");
-            Wire(controller, "welcomeText", welcome);
             Wire(controller, "logoutButton", logout);
             Wire(controller, "modeGroup", modeGroup);
             Wire(controller, "seatGroup", seatGroup);
@@ -660,7 +653,7 @@ namespace Poker.EditorTools
             leave.GetComponent<RectTransform>().Pin(new Vector2(1f, 1f), -28, -28, 150, 58);
             var banner = BuildLostBanner(canvas, 0, GameTexts.ConnectionLost);
             BuildConnectionStatus(canvas, new Vector2(1f, 1f), -196, -35, banner);
-            BuildAudioToggles(canvas, new Vector2(1f, 1f), -28, -98);
+            var gameSettings = ProfileUIBuilder.BuildSettingsButton(canvas, new Vector2(1f, 1f), -28, -98);
 
             var actionBar = BuildActionBar(canvas);
             var toast = BuildToast(canvas, new Vector2(0.5f, 1f), -12);
@@ -670,8 +663,9 @@ namespace Poker.EditorTools
             // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
             var rankingsButton = MakeButton(canvas, "HandRankingsButton", "♠  Hand rankings", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 24);
             rankingsButton.GetComponent<RectTransform>().Pin(new Vector2(0f, 0f), 28, 28, 250, 60);
-            ChatPanelBuilder.Build(canvas, buttonX: 296, margin: 28); // chat module: button next to the rankings hint
+            var chat = ChatPanelBuilder.Build(canvas, buttonX: 296, margin: 28); // chat module: button next to the rankings hint
             var rankings = BuildHandRankingsPanel(canvas);
+            ProfileUIBuilder.BuildSettingsPanel(canvas, gameSettings);
 
             AddSceneMusic(SoundId.MusicTable);
             var controller = AddController<GameController>("GameController");
@@ -706,6 +700,7 @@ namespace Poker.EditorTools
             Wire(controller, "handRankingsPanel", rankings);
             Wire(controller, "handRankingsButton", rankingsButton);
             Wire(controller, "toast", toast);
+            Wire(controller, "chat", chat);
 
             return Save(scene, SceneNames.Game);
         }

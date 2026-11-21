@@ -97,8 +97,9 @@ namespace Poker.UI.Game
             occupiedRoot.SetActive(true);
 
             nameText.text = seat.name;
-            initialText.text = string.IsNullOrEmpty(seat.name) ? "?" : seat.name.Substring(0, 1).ToUpperInvariant();
-            avatarBackground.color = UIColors.AvatarPalette[ColorIndex(seat.playerId)];
+            int avatar = Avatars.Clamp(seat.avatarId); // chosen in the profile (bots get one too)
+            initialText.text = Avatars.Symbols[avatar];
+            avatarBackground.color = Avatars.Colors[avatar];
             offlineBadge.SetActive(!seat.connected);
             dealerButton.SetActive(isDealer);
 
@@ -179,12 +180,6 @@ namespace Poker.UI.Game
         }
 
         /// <summary>Same id always gives the same colour (sum of character codes).</summary>
-        private static int ColorIndex(string playerId)
-        {
-            int sum = 0;
-            if (playerId != null) foreach (char c in playerId) sum += c;
-            return sum % UIColors.AvatarPalette.Length;
-        }
 
         private void UpdateTimerRing()
         {
