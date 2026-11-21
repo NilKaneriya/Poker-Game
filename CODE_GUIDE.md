@@ -82,13 +82,16 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 ### `src/network/`: Socket.IO layer
 | File | Responsibility |
 |---|---|
-| `socketServer.js` | Rejects sockets without a valid token; sends `session`; puts reconnecting players back at their table; marks disconnects. |
+| `socketServer.js` | Rejects sockets without a valid token; sends `session` (with the table you are at, or none after a restart) and your stats; puts reconnecting players back at their table; starts the grace period on disconnect. |
 | `handlers/lobbyHandlers.js` | `createTable` (validates mode and seat count 2-6), `joinTable` (bots tables are private), `leaveTable`, `listTables`, `startGame` (host only). |
 | `handlers/gameHandlers.js` | `playerAction` (validated by the engine), `rebuy`. |
 | `TableRunner.js` | Runs a table over time: **waiting room** (starts when full or when the host starts), turn timer, bot moves, result pause, next hand. Fills bots tables with bots. |
 | `playerView.js` | Builds what one specific player may see. The single gate for hidden information. |
 | `broadcast.js` | Sends every seated human their own view; sends the table list. |
 | `TurnTimer.js` | One countdown per table; exposes time left so clients draw their own ring. |
+| `seating.js` | Takes a player off a table (fold if in a hand, pass on host, close empty tables). Used by Leave and by the reconnect grace. |
+| `reconnectGrace.js` | Keeps a disconnected player's seat for 2 minutes, then frees it. |
+| `webglHosting.js` | Serves a Unity WebGL build from the server (one address for game and server). |
 | `authRoutes.js` | Register, login, `/auth/me`, logout; simple rate limit against brute force. |
 | `events.js` | Every event name, in one place. |
 
@@ -97,14 +100,15 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 |---|---|
 | `TableManager.js` | Creates tables with unique, easy-to-read 5-letter codes (no 0/O/1/I); finds a player's table; lists **friends** tables only. |
 | `AccountStore.js` | Accounts in a JSON file. Passwords as **scrypt** hashes with salt; tokens stored only as **SHA-256**. |
-| `StatsService.js` | Player stats placeholder (recording is a TODO). |
+| `StatsService.js` | **Player statistics** (the one retention feature): hands played, hands won, biggest pot, best hand shown. Recorded after every hand, saved to `data/stats.json`, sent only to that player. |
 
 ### `src/bots/BotPlayer.js`
 Three personalities (easy / normal / hard). Each one compares **hand strength** with the **price of calling**, raises with strong hands and sometimes bluffs.
 
 ### Tests and scripts
 - `npm test`: **54 unit tests** for cards, evaluator, pots, hands, table and bots.
-- `npm run test:client`: end-to-end smoke test against a running server: auth, join, reconnect, **waiting room, host-only start, auto start when full, private bots tables, seat-count validation**.
+- `npm test`: also covers **player stats**.
+- `npm run test:e2e`: starts its own server and runs the end-to-end test: auth, join, reconnect, waiting room, host-only start, auto start when full, private bots tables, seat-count validation, **stats after a real hand, seat freed after the grace period, session reporting a closed table**.
 - `npm run play:bots`: plays real hands against bots and checks no hidden cards leak.
 
 ---
@@ -115,7 +119,8 @@ Three personalities (easy / normal / hard). Each one compares **hand strength** 
 ```
 Core/        Constants (all static data), ServerConfig, AppServices
 Network/     DataModel (all data shapes), Api/ (HTTP)
-Managers/    AuthManager, NetworkManager (long-lived services)
+Managers/    AuthManager, NetworkManager, AudioManager (long-lived services)
+Audio/       SoundLibrary (which clip plays for each sound)
 Platform/    InviteLinkService, ShareService (browser / Android specific)
 Gameplay/    HandEvaluator (pure logic, no UI)
 Utils/       CardFormat (text formatting)
@@ -123,7 +128,7 @@ UI/Common/   reusable widgets (toast, connection status, option buttons, tweens)
 UI/Splash/   login scene
 UI/Lobby/    lobby scene
 UI/Game/     game scene: GameController + Table/ Panels/ Presenters/ Animation/ Preview/
-Editor/      tool that builds the scenes and UI art from code
+Editor/      tool that builds the scenes, UI art and placeholder sounds from code
 ```
 
 ### Core
@@ -139,6 +144,10 @@ Editor/      tool that builds the scenes and UI art from code
 | `DataModel` | **Every data shape**: HTTP and socket payloads (fields named exactly like the server's JSON), plus client-only models (`HandChartEntry`, `TableInvite`). |
 | `ApiClient` / `ApiFailure` | Small JSON-over-HTTP helper for login endpoints with readable errors. |
 | `AuthManager` | Login, register, logout; "Remember me" saves **only the token** (never the password). |
+| `AudioManager` | Plays sound effects from a pool of 16 voices (optionally delayed to match animations) and music with a crossfade between scenes. Music and sound can be switched off separately; the choice is saved. |
+| `SessionClock` | Responsible play: measures the session and raises a *Time for a break?* reminder after 1 hour (then hourly); can be turned off (saved). |
+| `SceneNotice` | A message carried to the next scene (e.g. "your table was closed"). |
+| `SoundLibrary` | ScriptableObject at `Resources/SoundLibrary`: one entry per `SoundId` with clips (a random one plays), volume and a little random pitch so repeated sounds don't feel robotic. |
 | `NetworkManager` | The Socket.IO connection. Scenes subscribe to C# events (`TableStateReceived`...) and call methods (`CreateTable`, `SendAction`, `StartGame`...). They never touch Socket.IO directly. Handles token rejection. |
 
 ### Platform
@@ -160,12 +169,17 @@ Editor/      tool that builds the scenes and UI art from code
 | `ToastView` | Short message that fades in and out. |
 | `ConnectionStatusView` | Online / reconnecting indicator and "connection lost" banner. |
 | `OptionButtonGroup` | A row of buttons where exactly one is selected (mode picker, seat-count picker). |
+| `BreakReminderPanel` | The *Time for a break?* overlay: *Keep playing* or *Don't remind me*. |
+| `SettingToggleButton` | On/off button for music, sound or break reminders. |
+| `ButtonClickSound` | Click sound on a button (the scene builder adds it to every button). |
+| `SceneMusic` | Starts the scene's music track. |
 
 ### UI/Splash and UI/Lobby
 | Class | Responsibility |
 |---|---|
 | `SplashController` | Server check → auto-login or login form → connect → Lobby. |
 | `LobbyController` | Create (mode + 2-6 seats, remembered), join by code, open-tables list, **auto-join from an invite link**. |
+| `PlayerStatsView` | *Your stats* card in the lobby. |
 | `TableListItemView` | One row of the open-tables list ("Waiting for players" / "Hand in progress"). |
 
 ### UI/Game: the table
@@ -188,6 +202,8 @@ Editor/      tool that builds the scenes and UI art from code
 | **Animation/** `TableChangeAnimator` | Compares the **previous and new snapshot** and decides what to animate: new bets, bets into the pot, street banner, pot to the winner. |
 | `ChipAnimator` | *How* chips fly: pooled chip images with a jump arc (no allocations per hand). |
 | `StageBannerView` | "PRE-FLOP / THE FLOP / THE TURN / THE RIVER / SHOWDOWN" banner. |
+| **Audio/** `TableSoundCues` | The audio twin of `TableChangeAnimator`: compares two snapshots and plays deal, check / call / raise / all-in / fold, board flips, chips into the pot and to the winner, your turn, win / lose, player joined, game start. |
+| `TurnTimerAlert` | Ticks once a second in the last 5 seconds of your turn (urgent in the last 3). |
 | **Preview/** `GamePreviewData` | Sample snapshots so the Game scene can be checked in the Editor without a server. |
 
 ### Editor
@@ -197,6 +213,9 @@ Editor/      tool that builds the scenes and UI art from code
 | `UIFactory` | Helpers to create styled UI objects from code. |
 | `UISprites` | Generates the rounded, circle, ring, glow and table images. |
 | `Theme` | Colours for building scenes. Shared colours come from `Constants.UIColors`. |
+| `Audio/PlaceholderSoundGenerator` | **Tools > Poker > Generate Placeholder Sounds** (also run by Build Scenes) synthesizes every sound as WAV files and fills empty `SoundLibrary` entries. Never overwrites clips you assigned. |
+| `Audio/SynthBuffer` | Tiny synthesizer: decaying tones with harmonics, slides, vibrato and tremolo, filtered noise; looping buffers for seamless music. |
+| `Audio/WavWriter` | Saves samples as a 16-bit WAV file. |
 
 ---
 
@@ -212,26 +231,27 @@ Editor/      tool that builds the scenes and UI art from code
 
 **Hand rankings hint.** One button opens the chart. The row of your current hand is marked, and the same hand name appears under your chips.
 
+**Sound.** Music for lobby and table (crossfade), card deal and flip, chip bet / raise / all-in / collect / win, check knock, fold swish, your-turn chime, timer ticks, win / lose jingles, player joined, game start, button clicks, error buzz. Sounds are chosen by comparing snapshots (like the animations), so no server changes were needed. Every sound is a placeholder made in code; replace any of them by dropping a recording onto its entry in `Resources/SoundLibrary`.
+
 **Animations.** Cards are dealt from the centre seat by seat. Chips fly for bets and blinds, slide into the pot at the end of each street and fly to the winner. Each street is announced. All of it is driven by comparing two snapshots, so **no extra server events were needed**.
 
 ---
 
 ## 8. Status
 
+Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
+
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, private bots tables. **54 unit tests pass**, and the **end-to-end smoke test passes** against a running server.
-- Client: all features above are implemented. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**.
-- Pushed to GitHub on branch `feature/play-modes-waiting-room`: play modes, waiting room and invite links.
+- Server: rules engine, bots, accounts, tables, waiting room, host start, private bots tables, **player statistics**, **reconnect grace period**, **WebGL hosting**. **57 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
+- Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
-**Needs doing before a demo**
-- After the latest refactor, run **Tools > Poker > Build Scenes** once. The Game scene's references changed (new `SeatsView`, `BoardView`, `TableChangeAnimator`), so an old scene won't work until it is rebuilt.
-- Play-test in Unity: the client animations, hand-rankings chart and refactor have been compiled but **not yet played** end to end.
-- Not committed yet: hand rankings, your-hand label, animations and the refactor.
+**Before submitting**
+- Run **Tools > Poker > Build Scenes**, then play-test in Unity (the latest client changes compile but have not been played end to end).
+- Make the WebGL build, host it with the server (README section 1) and record the optional 3-player video.
 
-**Known limits / next steps**
-- A disconnected player keeps their seat indefinitely (seat release after a grace period is a TODO). In a waiting room this can block the automatic start; the host can still press Start now.
-- Player stats aren't recorded yet (`StatsService` TODO).
-- Accounts are a JSON file and tables live in memory: fine for a prototype; a real deployment needs a database and multiple server instances need shared state (e.g. Redis).
+**Known limits** (also in the README's Known issues)
+- Tables live in memory: a server restart closes them and the hand in progress is lost (clients are told; accounts and stats survive).
+- Chips belong to a table; a friends table never adds bots.
 - Invite links open the installed **Android app** only after deep-link setup in the Android manifest; WebGL links work out of the box.
 
 ---
@@ -253,3 +273,9 @@ Editor/      tool that builds the scenes and UI art from code
 **How did you keep the client code clean?** One responsibility per class, `GameController` only coordinates, all static data in `Constants`, all data shapes in `DataModel`, and folders named by role (Table, Panels, Presenters, Animation, Platform, Gameplay).
 
 **How would you scale it?** Move accounts to a database, keep table state in one process per table (or sticky sessions), use the Socket.IO Redis adapter for broadcasting across instances.
+
+**What happens if the server goes down?** Clients show "Connection lost. Reconnecting..." and reconnect automatically. Tables live in memory, so after a restart the server tells each client it has no table; the client explains that the table was closed and the hand in progress was not saved, and returns to the lobby. Accounts and stats are on disk and survive. In production I would keep table state in Redis or a database and refund unfinished hands.
+
+**What happens if a player disconnects?** Their seat shows OFFLINE and their turns time out (check if free, otherwise fold). If they return within 2 minutes they get the same seat and chips; after that the seat is freed so the table isn't held up.
+
+**How did you handle responsible play?** One retention feature only (stats: facts, no streaks or rewards), a "Time for a break?" reminder after an hour that can be turned off, free unlimited restarts and no shop.

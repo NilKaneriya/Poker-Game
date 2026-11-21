@@ -1,161 +1,278 @@
 # Multiplayer Texas Hold'em
 
-A multiplayer Texas Hold'em prototype played with virtual chips only (no real money,
-no purchases). Players join a table from different devices; all game logic runs on
-the server.
+A multiplayer Texas Hold'em prototype for 2 to 6 players, played with **virtual chips
+only**. There are no real money deposits, withdrawals or wagers, no purchases and no
+loot boxes. Players join a table from different devices, and **all game logic runs on
+the server**.
 
-| Part | Tech |
+| Part | Technology |
 |---|---|
-| Client | Unity 2022.2 (WebGL / Windows / Android), TextMeshPro, DOTween |
-| Networking | Socket.IO v4 (Node server, Firesplash Socket.IO client in Unity) |
+| Client | Unity 2022.2.20f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
+| Networking | **Socket.IO v4**: Node server + the Firesplash Entertainment Socket.IO client in Unity (`Assets/Firesplash Entertainment`). Login over HTTP/JSON. |
 | Server | Node.js 18+, Express, Socket.IO |
 
-> Status: work in progress. The rules engine is done and tested; live hands over the
-> network, bots and the remaining features are next. Sections marked _TBD_ are filled
-> in as features land.
+**Target layout:** desktop, landscape (designed at 1920x1080 and scaling to any
+landscape window, in the browser via WebGL or as a Windows build). It also runs on
+Android phones and tablets in landscape, but the layout is tuned for desktop.
 
-## Repository layout
+See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
-```
-poker-server/              Node game server (server-authoritative)
-  src/engine/              Pure poker rules: cards, hand evaluation, pots, hand/table state
-  src/network/             Socket.IO handlers, per-player state views, turn timer
-  src/services/            Tables, accounts + login tokens, player stats
-  src/bots/                Computer opponents
-  test/                    Unit tests (node:test)
-poker-unity/PokerGame/     Unity client
-  Assets/Scene/            Splash -> Lobby -> Game
-  Assets/Scripts/
-    Core/                  Constants (all static data), server config, app services
-    Network/               DataModel (all data shapes), HTTP client
-    Managers/              Login and real-time connection (Socket.IO)
-    Platform/              Invite links, clipboard / share sheet
-    Gameplay/              Client-side hand evaluator (display only)
-    UI/                    One folder per scene + Common; Game/ has Table, Panels,
-                           Presenters, Animation, Preview
-    Editor/                Tools > Poker > Build Scenes (generates the scenes and UI art)
-```
+---
 
-See [CODE_GUIDE.md](CODE_GUIDE.md) for what every class does and the current status.
+## Contents
+1. [How to run](#1-how-to-run)
+2. [How to test multiplayer with two or more players](#2-how-to-test-multiplayer-with-two-or-more-players)
+3. [Main design decisions](#3-main-design-decisions)
+4. [Requirements checklist](#4-requirements-checklist)
+5. [Known issues and limits](#5-known-issues-and-limits)
+6. [Scope: done and left out](#6-scope-done-and-left-out)
+7. [Repository layout](#7-repository-layout)
 
-## How to run
+---
+
+## 1. How to run
 
 ### Server
 ```
 cd poker-server
 npm install
-cp .env.example .env
+cp .env.example .env      # optional: blinds, turn time, ports, data files
 npm start
 ```
-The server listens on `http://localhost:3000` (`GET /health` to check it).
+The server listens on `http://localhost:3000`; `GET /health` returns `{"status":"ok"}`.
 
-### Client
-1. Open `poker-unity/PokerGame` with Unity 2022.2.2f1.
-2. First time only: **Tools > Poker > Build Scenes**. This imports TextMeshPro's
-   essentials if needed, generates the UI images, creates the Splash, Lobby and Game
-   scenes and adds them to Build Settings.
-3. Set the server address in `Assets/Resources/ServerConfig` (default
-   `http://localhost:3000`).
-4. Open `Assets/Scene/Splash` and press Play.
+### Client (Unity Editor)
+1. Open `poker-unity/PokerGame` with **Unity 2022.2.20f1**.
+2. Run **Tools > Poker > Build Scenes** (needed the first time, and again after
+   pulling changes to the UI). This imports TextMeshPro's essentials if needed, then
+   generates the UI images and the placeholder sounds, creates the Splash, Lobby and
+   Game scenes, and adds them to Build Settings.
+3. The server address is set in `Assets/Resources/ServerConfig` (default `http://localhost:3000`).
+4. Open `Assets/Scene/Splash` and press **Play**. Create an account and sign in.
 
-Scene flow:
-- **Splash** checks the server, then shows the login form. With *Remember me* ticked,
-  the next launch signs in automatically and goes straight to the Lobby.
-- **Lobby** lets you create a table, join one with its 5-letter code, or pick one from
-  the open tables list. When creating, pick who you play with and the table size
-  (2-6 players):
-  - **Play vs bots**: the empty seats fill with bots and the game starts right away.
-    These tables are private (not listed, can't be joined).
-  - **Play with friends**: you get a room code and an invite link. Everyone who joins
-    waits in the waiting room at the table; when the last seat is taken the game
-    starts for everyone at once. The host (creator) can also press *Start now* with
-    2 or more players.
-- **Game** is the table: seats, cards, pot, turn timer, action buttons and the
-  win / lose / out-of-chips screens. Playing this scene without a server shows sample
-  data, so the layout can be checked in the Editor (right-click the GameController
-  component for more previews, e.g. the waiting room).
+### Playable build (one address for the game and the server)
+The server can also host the WebGL build, so one deployment gives a single link for
+both the game and the server. This also avoids browsers blocking an https page from
+talking to an http server.
+1. In `Assets/Resources/ServerConfig`, **clear `Server Url`**. An empty value makes a
+   WebGL build talk to the address it was loaded from.
+2. **File > Build Settings > WebGL > Build**, output to `poker-server/public/`.
+   Compression can be left on (Brotli or Gzip); the server sends the right headers.
+3. `npm start` and open `http://localhost:3000/`.
+4. To put it online, deploy `poker-server/` (including `public/`) to any Node host,
+   for example a Render or Railway "Web Service" with start command `npm start`. The
+   host provides https, and invite links and the server address follow automatically.
+   Note that many free hosts reset files on redeploy, which clears saved accounts and stats.
 
-### Invite links
-Links look like `https://your-site/poker/?room=ABCDE`. Opening one starts the game,
-signs in (or shows the login form) and joins that table directly.
-- WebGL builds use their own page address, so this works with no setup.
-- Other builds share the address set in `ServerConfig > Invite Base Url` (the web
-  address of your WebGL build). Leave it empty to share the room code only.
-- *Share invite* opens the device's share sheet (browser Web Share, Android
-  "Share via"); elsewhere it copies the invite to the clipboard.
-
-## Testing multiplayer with two or more players
-
-Run the server, then start two or more clients (Editor + a build, or several WebGL
-browser tabs) and sign in with a **different account in each**. One player creates a
-*Play with friends* table and shares the room code or invite link; the others join
-with the code, the link or from the table list. The game starts when the table is
-full (or when the host presses *Start now*).
-
-Untick *Remember me* when testing several clients on one machine: browser tabs (and
-builds of the same app) share saved settings, so a remembered login would sign every
-client in as the same player.
-
-Automated checks:
+### Automated tests
 ```
 cd poker-server
-npm test               # unit tests
-npm run test:client    # smoke test against a running server (login, join, reconnect,
-                       # waiting room, host start, full-table start, bots tables)
+npm test            # 57 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats
+npm run test:e2e    # starts a throwaway server and plays through the network: login, join by code,
+                    # reconnect, waiting room, host start, bots tables, stats, seat freed after disconnect
+npm run play:bots   # watch real hands against bots in the console (against a running server)
 ```
 
-## Design decisions
+---
 
-- **Server-authoritative.** Shuffling (crypto RNG), dealing, action validation and
-  showdown happen only on the server. Clients send intentions (`fold`, `raise 120`)
-  and receive state; they never send results.
-- **Engine separated from networking.** `src/engine` has no sockets, timers or I/O,
-  so poker rules can be unit-tested directly.
-- **Per-player views.** Every state message is built per player in
-  `network/playerView.js`, the single place where hidden information is filtered.
-- **Accounts and login tokens.** Players register with a username and password
-  (stored as scrypt hashes). Login returns a random token; the server keeps only its
-  SHA-256, so a leaked accounts file can't be used to sign in. The token is required in
-  the Socket.IO handshake, so a player's identity comes from the server, never from
-  data the client sends. The same token lets a dropped player reconnect to their seat.
-- **Remember me.** Only the token is saved on the device (never the password). It
-  lasts 30 days with *Remember me*, 12 hours without, and logging out revokes it.
-- **Client renders, server decides.** Unity scenes only draw the latest snapshot from
-  the server and send the player's choice; illegal buttons are disabled for clarity,
-  but every action is validated again on the server.
-- _TBD: layout (mobile/desktop), bots, stats feature, session-length reminder._
+## 2. How to test multiplayer with two or more players
 
-## Poker rules implemented (server engine)
+You need **one account per player**. Untick *Remember me* when running several clients
+on one machine: browser tabs (and builds of the same app) share saved settings, so a
+remembered login would sign every client in as the same player.
 
-All in `poker-server/src/engine`, covered by unit tests (`npm test`, 51 tests).
+**On one computer.** Start the server. Then open the game several times: in the Unity
+Editor plus a Windows build, or in several browser tabs/windows if you use the WebGL
+build hosted at `http://localhost:3000/`.
 
-- **Dealing and blinds.** Hole cards are dealt one at a time starting left of the button.
-  Small and big blind sit left of the button; heads-up, the button posts the small blind,
-  acts first pre-flop and last after the flop. A burn card precedes flop, turn and river.
-- **Dealer button** moves one seat clockwise each hand, skipping empty seats and players
-  with no chips (simplified: no "dead button" rule).
-- **Betting.** Minimum bet is the big blind; a raise must be at least the size of the
-  previous raise. Raise amounts are "raise to" totals. A player who can't cover a call
-  is put all-in automatically. An all-in smaller than a full raise does not reopen
-  betting for players who already acted. No raising when nobody is left to respond.
-- **Uncalled bets** (the part of a bet nobody matched) go back to their owner.
-- **All-in run-out.** When fewer than two players can still bet, the rest of the board
-  is dealt and the hand goes to showdown.
-- **Hand ranking** from Royal Flush down to High Card, best 5 of 7 cards, with kickers;
-  A-2-3-4-5 counts as the lowest straight.
-- **Side pots** at every all-in level; folded players' chips stay in the pot but they
-  can't win it.
-- **Split pots** are divided equally; chips that can't be split go to the winner
-  closest to the left of the button.
-- **Timeouts** check when checking is free, otherwise fold. Players leaving mid-hand are
-  folded immediately and their bets stay in the pot.
-- A 300-hand random simulation checks that chips are never created or lost.
+**On different devices.** Run the server on a machine the others can reach (same
+Wi-Fi, or the hosted build above) and point `Server Url` at it, e.g.
+`http://192.168.1.20:3000`.
 
-## Known issues
+**A 3-player hand, step by step**
+1. Player A: **Lobby > Play with friends > 3 players > Create**. A waiting room
+   shows a 5-letter room code and an invite link.
+2. Players B and C: type the code in **Join with a code**, pick the table from
+   **Open tables**, or open the invite link (WebGL). Each one sits down; everyone
+   sees the seats fill up.
+3. When the third player sits, the game starts for everyone at the same moment. The
+   host can also press **Start now** with 2 or more players.
+4. Play: the glowing seat with the timer ring is the player to act. Only legal
+   buttons are enabled. **Hand rankings** (bottom-left) shows the hand chart and marks
+   your current hand.
 
-_TBD._
+**Things worth trying**
+- **Timer:** don't act for 30 seconds. You check if checking is free, otherwise you fold.
+- **Disconnect:** close a client mid-hand. The seat shows OFFLINE, turns time out, and
+  reopening the game within 2 minutes puts you back in the same seat with the same chips.
+- **Join mid-hand:** a new player watches ("Dealt in next hand") and joins the next hand.
+- **Leave mid-hand:** the player is folded and their chips already bet stay in the pot.
+- **Side pots:** have two players go all-in for different amounts (e.g. after one has lost chips).
+- **Out of chips:** go all-in and lose. You become a spectator with a free "Restart with 1,000".
+- **Cheating:** the server rejects anything out of turn or against the rules (see
+  `npm test` "actions out of turn or against the rules are rejected").
+- **Server down:** stop the server. Clients show "Connection lost. Reconnecting...".
 
-## Not real money
+Playing alone: **Play vs bots** fills the table with bots (easy, normal, hard).
 
-Chips are virtual and have no value. There are no purchases, loot boxes or wagering
-of real money anywhere in the game.
+---
+
+## 3. Main design decisions
+
+**Server-authoritative.** Shuffling (crypto-secure random), dealing, validating every
+action and deciding winners happen only on the server. Clients send intentions
+(`fold`, `raise to 120`) and receive state; they never send results.
+
+**Hidden information never leaves the server.** Every state message is built per
+player in `network/playerView.js`, the single place where state becomes a client
+payload. You get your own hole cards; others' cards are added only when shown at
+showdown. Bots receive exactly the same filtered view as a human in their seat.
+
+**Snapshots, not diffs.** After every change each player receives a full snapshot of
+the table as they may see it. The client stays simple and stateless, reconnecting is
+just "receive the latest snapshot", and animations and sounds are derived on the
+client by comparing two snapshots, so no extra events are needed.
+
+**Pure rules engine.** `src/engine` (cards, hand evaluator, pots, hand, table) has no
+sockets, timers or I/O, so the rules are unit-tested directly. `TableRunner` decides
+*when* things happen (timers, bots, next hand); the engine decides *what* is allowed.
+
+**Identity from a login token.** Accounts use scrypt-hashed passwords. Login returns a
+random token, and the server stores only its SHA-256. The token is checked in the
+Socket.IO handshake, so a player's identity never comes from client data. The same
+token lets a dropped player reconnect to their seat. *Remember me* stores only the
+token (30 days); logging out revokes it.
+
+**Tables: two modes.** *Play with friends* tables wait in a waiting room until every
+seat is filled (or the host starts), so everyone starts together. *Play vs bots*
+tables fill empty seats with bots. Bots are kept out of friends tables on purpose,
+so friends play each other.
+
+**Chips belong to a table.** Every player sits down with 1,000 chips. Busting out
+makes you a spectator with a free restart; nothing is ever sold.
+
+**Client code structure.** `GameController` only coordinates. Each part of the screen
+has its own class (seats, board, panels, result, your hand, animations, sounds). All
+static values (texts, colours, timings, layouts, the hand chart) live in
+`Constants.cs`; all data shapes live in `DataModel.cs`. The UI is generated by an
+editor tool, so the scenes are reproducible from code.
+
+**Responsible design.**
+- One retention feature only: **Your stats** in the lobby (hands played, hands won,
+  biggest pot, best hand). They are facts, not goals: no streaks, daily rewards,
+  countdowns or timers pushing you to play.
+- After **1 hour** of play a gentle *"Time for a break?"* message appears (then again
+  every hour). *Don't remind me* turns it off; it can be switched back on in the lobby
+  (**Break reminders: On/Off**).
+- Restarting after losing all chips is free and unlimited; there is no shop.
+- Sound and music can be switched off separately.
+
+---
+
+## 4. Requirements checklist
+
+| Requirement | Where / how |
+|---|---|
+| Create a table, join by code or from a list | Lobby: create (mode + 2-6 seats), 5-letter code, open-tables list, invite links |
+| Server-authoritative shuffle, deal, winner | `engine/cards.js` (crypto shuffle), `HoldemHand.js`, `handEvaluator.js`, `pots.js` |
+| Nobody sees opponents' cards | `network/playerView.js`; tested ("public snapshot never contains hole cards", bots peek test) |
+| Real-time sync, secrets hidden per player | Per-player `tableState` after every change (`broadcast.js`) |
+| Turn timer, auto fold (or check) | `TurnTimer.js` + `HoldemHand.actOnTimeout`; 30 s, ring on the active seat, ticking in the last 5 s |
+| Join / leave mid-hand | Joiners watch until the next hand; leavers are folded, bets stay in the pot (tested) |
+| Blinds, dealer button moving | `HoldemHand.start`, `Table.startHand` (tested, incl. heads-up) |
+| Pre-flop, flop, turn, river, showdown | `HoldemHand.endBettingRound` (tested) |
+| Fold / Check / Call / Raise / All-in, illegal ones disabled | `getLegalActions` (server) → `ActionBar` disables what isn't allowed |
+| Hand ranking Royal Flush to High Card, ties | `handEvaluator.js` (tested: every rank, kickers, wheel, board plays) |
+| Side pots (mandatory) | `pots.js` (tested: 3 all-ins, folded chips, side pot to next best) |
+| Show winning hands | Result screen with the winning 5 cards; winning cards highlighted on the table; opponents' cards revealed at showdown; split pots and side pots list every winner |
+| Clear UI: cards, board, pot, chips, turn, last action | Seats show chips, last action badge, dealer button, turn glow and timer |
+| New players understand without a manual | Only legal buttons enabled, *Hand rankings* chart with rules, "your hand" label under your chips, street banners |
+| Min bet = big blind; min raise ≥ previous raise | `HoldemHand.getLegalActions/raiseTo` (tested) |
+| Half pot / pot buttons + custom amount | `ActionBar` (slider and typed amount, clamped to the legal range) |
+| Short stack call → automatic all-in | `HoldemHand.applyAction` (tested) |
+| Bots, levels with different behaviour | `BotPlayer.js`: easy (calls a lot), normal (by strength), hard (tight, bigger raises, bluffs) |
+| Split pot, odd chip closest to the button | `pots.distributePots` (tested) |
+| Out of chips → spectator + free restart 1,000 | `Table.rebuy`, "Out of chips" screen, no purchase anywhere |
+| Disconnect mid-hand: auto fold after timeout, reconnect keeps state | Seat marked OFFLINE, turns time out; same seat and chips on return; seat freed after 2 min (`reconnectGrace.js`, e2e tested) |
+| Server disconnection: clear message | "Connection lost. Reconnecting..." banner; after a server restart the client explains the table was closed (see Known issues for what happens to bets) |
+| Cheating attempts rejected | Turn, action, amount and chips validated in the engine; payload validation in handlers (tested) |
+| One retention feature | Player statistics (`StatsService.js`, lobby *Your stats*) |
+| Long-session notification with off switch | *Time for a break?* after 1 h (`SessionClock`, `BreakReminderPanel`), toggle in lobby |
+| Optional: sound and dealing animations | Dealing, chips, street banners; music and sound effects (placeholders made in code) with on/off |
+| Optional: tests for ranking and pots | `test/handEvaluator.test.js`, `test/pots.test.js` (+ hand, table, bots, stats, e2e) |
+
+---
+
+## 5. Known issues and limits
+
+- **Server restart / crash: the hand in progress is lost.** Tables and hands live in
+  the server's memory. If the server stops, every table closes and the chips bet in
+  the current hand are not returned. Accounts and statistics are saved to disk and
+  survive. While the server is unreachable clients show *"Connection lost.
+  Reconnecting..."*. When it comes back they reconnect automatically, are told *"The
+  server restarted, so your table was closed. The hand in progress was not saved."*,
+  and return to the lobby, where a new table starts everyone at 1,000 chips again. A
+  production version would keep table state in a database or Redis and refund
+  unfinished hands.
+- **Chips don't carry between tables.** Each table gives 1,000 chips. This is
+  intentional for a virtual-chips prototype, but it means leaving a table resets your stack.
+- **Disconnected players slow the table for up to 2 minutes:** each of their turns
+  waits out the 30 s timer before auto check/fold. After 2 minutes the seat is freed.
+- **A friends table never adds bots.** If everyone else leaves after the game
+  started, the last player waits for someone to join.
+- **Single server process.** No horizontal scaling; fine for a prototype.
+- **Dead-button rule simplified:** the button always moves to the next player who
+  can play.
+- **Invite links** open the game directly in WebGL. Windows and Android builds share
+  the code (or the WebGL link if `Invite Base Url` is set); opening the installed
+  Android app from a link would need a deep-link intent filter, which is not configured.
+- **Layout** is designed for desktop landscape. It works on landscape phones but text
+  is small on small screens; portrait is not supported.
+- **Placeholder audio.** Sounds and music are synthesized by an editor tool and can be
+  replaced in `Resources/SoundLibrary`. Browsers start audio only after the first click.
+- **The Unity client has no automated tests.** The rules, pots, bots, stats and
+  networking are tested on the server; the client is tested by hand (section 2).
+- **Break reminder** counts time since the game was opened on that device.
+- **Free hosting** may sleep when idle (slow first load) and may reset saved
+  accounts and stats on redeploy.
+
+---
+
+## 6. Scope: done and left out
+
+**Done:** everything in the brief's *What to build* sections 1-7 (see the checklist
+above), plus the optional sound effects, dealing and chip animations, and automated
+tests for hand ranking and pot distribution. Extras: invite links and share sheet,
+waiting room, hand rankings hint, and a WebGL build hosted by the server.
+
+**Left out:**
+- In-table text chat (optional extra).
+- Persistent tables and refunds after a server crash (see Known issues).
+- Gameplay video (record a 3-player hand following section 2).
+
+---
+
+## 7. Repository layout
+
+```
+poker-server/              Node game server (server-authoritative)
+  src/engine/              Pure poker rules: cards, hand evaluation, pots, hand/table state
+  src/network/             Socket.IO handlers, per-player views, turn timer, reconnect grace,
+                           WebGL hosting
+  src/services/            Tables, accounts + login tokens, player stats
+  src/bots/                Computer opponents (3 levels)
+  test/                    Unit tests (node:test)
+  scripts/                 End-to-end test, bot game viewer
+poker-unity/PokerGame/     Unity client
+  Assets/Scene/            Splash -> Lobby -> Game (generated by Tools > Poker > Build Scenes)
+  Assets/Scripts/
+    Core/                  Constants (all static data), server config, app services
+    Network/               DataModel (all data shapes), HTTP client
+    Managers/              Login, real-time connection, audio, session clock
+    Audio/                 Sound library asset
+    Platform/              Invite links, clipboard / share sheet
+    Gameplay/              Client-side hand evaluator (display only)
+    UI/                    One folder per scene + Common; Game/ has Table, Panels,
+                           Presenters, Animation, Audio, Preview
+    Editor/                Scene, UI art and placeholder sound generators
+```
