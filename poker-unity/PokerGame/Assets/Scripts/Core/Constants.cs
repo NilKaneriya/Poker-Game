@@ -395,6 +395,12 @@ namespace Poker.Core
             public const string YourHand = "Your hand: <color=#F6C744><b>{0}</b></color>";
             public const string DealtInNextHand = "Dealt in next hand";
 
+            // Joined a game against bots mid-hand: watch, then take a bot's seat
+            public const string WaitingForSeat = "Hand in progress - you'll take a seat when it ends";
+            public const string HandWaitingForSeat = "You'll take a bot's seat when this hand ends";
+            public const string TookBotSeat = "You're in! A bot gave up its seat for you";
+            public const float WaitingForSeatToastSeconds = 8f;
+
             // End of hand with more than one winner (split pot or side pots)
             public const string SplitPot = "Split pot";
             public const string PotsWon = "Pots won";

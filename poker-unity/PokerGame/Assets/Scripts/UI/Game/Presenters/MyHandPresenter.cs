@@ -27,7 +27,8 @@ namespace Poker.UI.Game
             int rank = -1;
             string status;
 
-            if (hand == null) status = GameTexts.HandNotDealt;
+            if (state.you != null && state.you.waiting) status = GameTexts.HandWaitingForSeat;
+            else if (hand == null) status = GameTexts.HandNotDealt;
             else if (hand.yourCards == null || hand.yourCards.Count == 0) status = GameTexts.HandWatching;
             else if (hand.seats.Find(s => s.seat == state.you?.seat)?.folded == true) status = GameTexts.HandFolded;
             else

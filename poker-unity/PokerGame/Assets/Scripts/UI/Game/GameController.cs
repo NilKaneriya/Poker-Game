@@ -21,6 +21,7 @@ namespace Poker.UI.Game
     ///   ActionBar            your buttons on your turn
     ///   HandResultPresenter  win / lose / out-of-chips screens
     ///   MyHandPresenter      your current hand (pill under your chips + chart mark)
+    ///   SeatWaitPresenter    joined a bots game mid-hand: "you'll sit when it ends"
     ///   TableChangeAnimator  chips, dealing and street banners between snapshots
     ///   TableSoundCues       sounds between snapshots; TurnTimerAlert ticks on your turn
     ///   TableInviteActions   copy code / link, share invite
@@ -56,6 +57,7 @@ namespace Poker.UI.Game
         private TableState table;
         private HandResultPresenter results;
         private MyHandPresenter myHand;
+        private SeatWaitPresenter seatWait;
         private TableInviteActions invites;
         private TableSoundCues sounds;
 
@@ -64,6 +66,7 @@ namespace Poker.UI.Game
             AppServices.EnsureExists();
             results = new HandResultPresenter(resultPanel, board, seats);
             myHand = new MyHandPresenter(seats, handRankingsPanel);
+            seatWait = new SeatWaitPresenter(toast);
             invites = new TableInviteActions(toast);
             sounds = new TableSoundCues();
         }
@@ -130,6 +133,7 @@ namespace Poker.UI.Game
             actionBar.Render(state);
             results.Render(state);
             myHand.Render(state);
+            seatWait.Render(state);
             if (animator != null) animator.Play(previous, state);
             sounds.Play(previous, state);
             if (timerAlert != null) timerAlert.Track(state);

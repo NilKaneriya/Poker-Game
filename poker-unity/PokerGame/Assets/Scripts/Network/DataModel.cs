@@ -91,7 +91,8 @@ namespace Poker.Network
         public class YouInfo
         {
             public string playerId;
-            public int seat;
+            public int seat;     // -1 while watching without a seat
+            public bool waiting; // joined a bots table mid-hand; takes a bot's seat when the hand ends
         }
 
         [Serializable]
