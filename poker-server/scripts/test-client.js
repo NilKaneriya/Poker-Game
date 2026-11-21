@@ -36,7 +36,8 @@ const stateWhere = (socket, test) =>
  * Play-with-friends and play-with-bots tables:
  * - a friends table waits until every seat is taken, then the game starts by itself
  * - only the host can start early, and only with 2+ players
- * - a bots table fills its empty seats with bots, starts at once and can't be joined
+ * - a bots table fills its empty seats with bots and starts at once; a friend who joins
+ *   it by code mid-hand takes a bot's seat when the hand ends
  */
 async function waitingRoomChecks(alice, bob) {
   const errorFrom = (socket) => once(socket, 'errorMessage');
@@ -105,6 +106,57 @@ async function waitingRoomChecks(alice, bob) {
   check(fallback.maxSeats === 6, 'invalid seat count was not clamped');
   alice.emit('leaveTable');
   bob.emit('leaveTable');
+}
+
+/**
+ * Table chat: only people at the table get messages; text is cleaned; names come from
+ * the login; history is sent on request; spam is rate limited.
+ */
+async function chatChecks(alice, bob) {
+  const messageWhere = (socket, test) =>
+    new Promise((resolve) => {
+      const handler = (m) => { if (test(m)) { socket.off('chatMessage', handler); resolve(m); } };
+      socket.on('chatMessage', handler);
+    });
+
+  // Not at a table: refused.
+  alice.emit('leaveTable');
+  bob.emit('leaveTable');
+  alice.emit('chatSend', { text: 'hello?' });
+  const notSeated = await once(alice, 'chatError');
+  check(/table/i.test(notSeated.message), 'chat allowed without a table');
+
+  alice.emit('createTable', { tableName: 'Chat', mode: 'friends', maxSeats: 3 });
+  const room = await stateWhere(alice, (s) => s.name === 'Chat');
+  const joinedNote = messageWhere(alice, (m) => m.kind === 'system' && /joined/.test(m.text));
+  bob.emit('joinTable', { code: room.code });
+  await stateWhere(bob, (s) => s.code === room.code);
+  await joinedNote;
+
+  // A message reaches everyone at the table, cleaned, with the sender's real name.
+  const toBob = messageWhere(bob, (m) => m.kind === 'player');
+  alice.emit('chatSend', { text: '  good\nluck   all  ', name: 'Mallory' });
+  const msg = await toBob;
+  check(msg.text === 'good luck all', `chat text not cleaned: "${msg.text}"`);
+  check(msg.name !== 'Mallory' && msg.playerId === room.you.playerId, 'chat sender could be faked');
+
+  const long = messageWhere(bob, (m) => m.kind === 'player' && m.id > msg.id);
+  alice.emit('chatSend', { text: 'x'.repeat(500) });
+  check((await long).text.length === 140, 'long chat message not cut to 140');
+
+  // History for someone opening the table later.
+  const history = await new Promise((resolve) => { bob.once('chatHistory', resolve); bob.emit('getChat'); });
+  check(history.code === room.code && history.messages.some((m) => m.id === msg.id), 'chat history missing the message');
+
+  // Spam: the 6th message inside 10 seconds is refused (2 already sent above).
+  for (let i = 0; i < 3; i++) alice.emit('chatSend', { text: `spam ${i}` });
+  const spamError = once(alice, 'chatError');
+  alice.emit('chatSend', { text: 'one too many' });
+  check(/slow down/i.test((await spamError).message), 'chat spam not rate limited');
+
+  alice.emit('leaveTable');
+  bob.emit('leaveTable');
+  console.log('Chat: table-only, cleaned, real names, history, rate limited');
 }
 
 /**
@@ -216,6 +268,7 @@ async function graceChecks(alice, bob, bobToken) {
 
   await waitingRoomChecks(alice, bob2);
   await statsChecks(alice);
+  await chatChecks(alice, bob2);
   if (GRACE_MS) await graceChecks(alice, bob2, bobLogin.body.token);
   else console.log('(skipping reconnect-grace check: run `npm run test:e2e` for the full suite)');
 
