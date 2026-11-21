@@ -2,6 +2,8 @@ const config = require('../config');
 const log = require('../utils/logger');
 const TurnTimer = require('./TurnTimer');
 const { sendTableState, sendTableList, sendStats } = require('./broadcast');
+const gameEvents = require('./gameEvents');
+const { GAME_EVENTS } = gameEvents;
 const stats = require('../services/StatsService');
 const { buildPlayerView } = require('./playerView');
 const { BotPlayer, LEVELS } = require('../bots/BotPlayer');
@@ -94,9 +96,24 @@ class TableRunner {
     const result = this.table.finishHand();
     const names = result.winners.map((w) => `${this.table.getSeat(w.playerId)?.name ?? w.playerId} +${w.amount}`);
     log.info(`Table ${this.table.code}: hand #${this.table.handNumber} won by ${names.join(', ')}`);
+    this.publishResult(result);
     this.recordStats(result);
     this.update();
     sendTableList(this.io);
+  }
+
+  /** Tell other modules (e.g. chat's hand log) who won. The game itself doesn't care who listens. */
+  publishResult(result) {
+    gameEvents.emit(GAME_EVENTS.HAND_FINISHED, {
+      code: this.table.code,
+      handNumber: this.table.handNumber,
+      winners: result.winners.map((w) => ({
+        playerId: w.playerId,
+        name: this.table.getSeat(w.playerId)?.name ?? null, // null = left during the hand
+        amount: w.amount,
+        handName: w.handName,
+      })),
+    });
   }
 
   /** Update the stats of every human dealt into the hand that just ended and send them theirs. */
@@ -192,6 +209,7 @@ class TableRunner {
       const seat = table.addPlayer({ playerId, name });
       table.getSeat(playerId).connected = connected;
       log.info(`Table ${table.code}: ${name} took seat ${seat} after waiting for the hand to end`);
+      gameEvents.emit(GAME_EVENTS.PLAYER_SEATED, { code: table.code, playerId, name });
     }
   }
 
@@ -204,6 +222,7 @@ class TableRunner {
     this.table.removePlayer(bot.playerId);
     this.bots.delete(bot.playerId);
     log.info(`Table ${this.table.code}: bot ${bot.name} left to make room for a player`);
+    gameEvents.emit(GAME_EVENTS.BOT_REPLACED, { code: this.table.code, name: bot.name });
     return true;
   }
 

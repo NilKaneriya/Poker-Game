@@ -4,6 +4,8 @@ const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
 const { tableRoom, sendTableList, sendStats } = require('../broadcast');
+const gameEvents = require('../gameEvents');
+const { GAME_EVENTS } = gameEvents;
 const { runnerFor } = require('../TableRunner');
 const { removeFromTable } = require('../seating');
 
@@ -36,6 +38,7 @@ module.exports = (io, socket) => {
     if (seatIndex === -1) return fail('Table is full');
     socket.join(tableRoom(table.code));
     log.info(`${name} sat at ${table.code} seat ${seatIndex}`);
+    gameEvents.emit(GAME_EVENTS.PLAYER_JOINED, { code: table.code, playerId, name });
     runnerFor(io, table).update(); // adds/removes bots and starts a hand when possible
     sendTableList(io);
   }
@@ -89,6 +92,7 @@ module.exports = (io, socket) => {
     table.addWaiting({ playerId, name });
     socket.join(tableRoom(table.code));
     log.info(`${name} joined bots table ${table.code}; seated when the current hand ends`);
+    gameEvents.emit(GAME_EVENTS.PLAYER_WAITING, { code: table.code, playerId, name });
     runnerFor(io, table).update();
   }
 

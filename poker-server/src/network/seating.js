@@ -1,6 +1,8 @@
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
 const { sendTableList } = require('./broadcast');
+const gameEvents = require('./gameEvents');
+const { GAME_EVENTS } = gameEvents;
 const { runnerFor, removeRunner } = require('./TableRunner');
 
 /**
@@ -19,8 +21,10 @@ function removeFromTable(io, playerId, name) {
   if (table.humanCount === 0) { // only bots left (nobody seated or waiting)
     removeRunner(table.code);
     tables.remove(table.code);
+    gameEvents.emit(GAME_EVENTS.TABLE_CLOSED, { code: table.code });
     log.info(`Table ${table.code} closed`);
   } else {
+    gameEvents.emit(GAME_EVENTS.PLAYER_LEFT, { code: table.code, playerId, name });
     runnerFor(io, table).update();
   }
   sendTableList(io);
