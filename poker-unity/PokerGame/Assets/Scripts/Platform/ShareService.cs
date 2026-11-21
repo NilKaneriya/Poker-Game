@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Runtime.InteropServices;
 #endif
 
-namespace Poker.Core
+namespace Poker.Platform
 {
     /// <summary>
     /// Copy text and open the device's share sheet.
@@ -12,7 +12,7 @@ namespace Poker.Core
     ///   others  - clipboard only
     /// GUIUtility.systemCopyBuffer alone does not reach the browser clipboard in WebGL.
     /// </summary>
-    public static class ShareUtil
+    public static class ShareService
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
         [DllImport("__Internal")] private static extern void PokerCopyText(string text);

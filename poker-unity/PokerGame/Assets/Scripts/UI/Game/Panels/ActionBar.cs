@@ -57,6 +57,18 @@ namespace Poker.UI.Game
 
         private int RaiseAmount => (int)raiseSlider.value;
 
+        /// <summary>Show the bar when it is our turn in this snapshot, hide it otherwise.</summary>
+        public void Render(TableState state)
+        {
+            HandState hand = state.hand;
+            int mySeat = state.you?.seat ?? -1;
+            bool myTurn = hand != null && hand.legal != null && hand.result == null && hand.currentSeat == mySeat;
+            if (!myTurn) { Hide(); return; }
+
+            int myBet = hand.seats.Find(s => s.seat == mySeat)?.bet ?? 0;
+            Show(hand.legal, hand.pot, myBet);
+        }
+
         /// <summary>Show the bar for our turn. pot = everything in the middle, myStreetBet = what we already put in this street.</summary>
         public void Show(LegalActions legalActions, int potSize, int alreadyBet)
         {

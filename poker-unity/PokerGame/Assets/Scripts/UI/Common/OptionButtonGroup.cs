@@ -2,24 +2,24 @@ using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static Poker.Core.Constants;
 
 namespace Poker.UI
 {
     /// <summary>
     /// A row of buttons where exactly one is selected (like radio buttons),
-    /// e.g. "Play with bots / Play with friends" or the table size 2..6.
+    /// e.g. "Play vs bots / Play with friends" or the table size 2..6.
     /// </summary>
-    public class OptionGroup : MonoBehaviour
+    public class OptionButtonGroup : MonoBehaviour
     {
         [SerializeField] private Button[] options = new Button[0];
-        [SerializeField] private Color selectedColor = new Color32(246, 199, 68, 255);   // Theme.Gold
-        [SerializeField] private Color normalColor = new Color32(38, 53, 90, 255);       // Theme.PanelLight
-        [SerializeField] private Color selectedTextColor = new Color32(11, 18, 32, 255); // Theme.Dark
-        [SerializeField] private Color normalTextColor = new Color32(243, 246, 251, 255); // Theme.Text
+        [SerializeField] private Color selectedColor = UIColors.Gold;
+        [SerializeField] private Color normalColor = UIColors.PanelLight;
+        [SerializeField] private Color selectedTextColor = UIColors.Dark;
+        [SerializeField] private Color normalTextColor = UIColors.Text;
 
         public event Action<int> Changed;
         public int Selected { get; private set; } = -1;
-        public int Count => options.Length;
 
         private void Awake()
         {

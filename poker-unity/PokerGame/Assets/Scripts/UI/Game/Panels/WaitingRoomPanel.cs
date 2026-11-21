@@ -1,7 +1,9 @@
 using System;
+using Poker.Platform;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using static Poker.Core.Constants;
 using static Poker.Network.DataModel;
 
 namespace Poker.UI.Game
@@ -44,22 +46,27 @@ namespace Poker.UI.Game
             });
         }
 
-        public void Show(TableState table, bool isHost, bool hasInviteLink)
+        /// <summary>Open, update or close for this snapshot. Returns true when it just closed (game started).</summary>
+        public bool Render(TableState table)
         {
+            if (table.started)
+            {
+                bool wasOpen = IsOpen;
+                Hide();
+                return wasOpen;
+            }
+
             int seated = table.seats.FindAll(s => s != null).Count;
             int missing = Mathf.Max(0, table.maxSeats - seated);
+            bool isHost = table.hostId == table.you?.playerId;
 
-            statusText.text = $"<color=#F6C744><b>{seated}</b></color> of {table.maxSeats} players at the table";
+            statusText.text = string.Format(GameTexts.RoomStatus, seated, table.maxSeats);
             codeText.text = table.code;
-
-            string waitFor = missing == 1 ? "1 more player joins" : $"{missing} more players join";
-            footerText.text = isHost
-                ? (seated >= 2 ? $"Starts when {waitFor}, or start now." : $"Starts when {waitFor}.")
-                : $"Starts when {waitFor}, or when the host starts it.";
+            footerText.text = FooterText(isHost, seated, missing);
 
             startButton.gameObject.SetActive(isHost);
             startButton.interactable = seated >= 2;
-            copyLinkButton.gameObject.SetActive(hasInviteLink);
+            copyLinkButton.gameObject.SetActive(InviteLinkService.BuildLink(table.code) != null);
 
             if (!IsOpen)
             {
@@ -72,6 +79,7 @@ namespace Poker.UI.Game
                 UIAnim.Punch(statusText.transform, 0.12f); // someone joined or left
             }
             shownPlayers = seated;
+            return false;
         }
 
         public void Hide()
@@ -80,6 +88,13 @@ namespace Poker.UI.Game
             IsOpen = false;
             shownPlayers = -1;
             UIAnim.FadeOut(group, 0.3f);
+        }
+
+        private static string FooterText(bool isHost, int seated, int missing)
+        {
+            string waitFor = missing == 1 ? GameTexts.OneMorePlayer : string.Format(GameTexts.MorePlayers, missing);
+            if (!isHost) return string.Format(GameTexts.RoomGuestWaits, waitFor);
+            return string.Format(seated >= 2 ? GameTexts.RoomHostCanStart : GameTexts.RoomHostWaits, waitFor);
         }
     }
 }

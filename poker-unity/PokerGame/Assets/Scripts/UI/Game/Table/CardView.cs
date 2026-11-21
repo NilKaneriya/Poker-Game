@@ -1,6 +1,8 @@
+using DG.Tweening;
 using Poker.Core;
 using TMPro;
 using UnityEngine;
+using static Poker.Core.Constants;
 
 namespace Poker.UI.Game
 {
@@ -25,6 +27,9 @@ namespace Poker.UI.Game
         private Shown shown = Shown.Empty;
         private string shownCode;
 
+        private Vector3 homePosition; // where the layout put this card; deal animations return here
+        private bool homeKnown;
+
         public void ShowFace(string code)
         {
             if (shown == Shown.Face && shownCode == code) return;
@@ -34,8 +39,37 @@ namespace Poker.UI.Game
             shownCode = code;
             gameObject.SetActive(true);
 
-            if (wasBack) UIAnim.Flip(transform, () => ApplyFace(code)); // reveal
-            else { ApplyFace(code); UIAnim.PopIn(transform, 0.3f); }   // freshly dealt
+            if (wasBack) { SnapHome(); UIAnim.Flip(transform, () => ApplyFace(code)); } // reveal
+            else { ApplyFace(code); UIAnim.PopIn(transform, 0.3f); }                     // freshly dealt
+        }
+
+        /// <summary>Deal animation: slide in from 'from' (world position, e.g. the table centre).</summary>
+        public void FlyIn(Vector3 from, float delay)
+        {
+            if (!Application.isPlaying) return;
+            RememberHome();
+            transform.DOKill();
+            transform.localScale = Vector3.zero;
+            transform.position = from;
+            DOTween.Sequence()
+                .AppendInterval(delay)
+                .Append(transform.DOScale(0.6f, 0.05f))
+                .Append(transform.DOLocalMove(homePosition, AnimationTimings.DealFlight).SetEase(Ease.OutCubic))
+                .Join(transform.DOScale(1f, AnimationTimings.DealFlight).SetEase(Ease.OutBack))
+                .OnKill(SnapHome) // never leave a card stranded mid-flight
+                .SetTarget(transform);
+        }
+
+        private void RememberHome()
+        {
+            if (homeKnown) return;
+            homePosition = transform.localPosition;
+            homeKnown = true;
+        }
+
+        private void SnapHome()
+        {
+            if (homeKnown) transform.localPosition = homePosition;
         }
 
         public void ShowBack()
@@ -53,6 +87,9 @@ namespace Poker.UI.Game
         {
             shown = Shown.Empty;
             shownCode = null;
+            transform.DOKill();
+            SnapHome();
+            transform.localScale = Vector3.one;
             SetHighlighted(false);
             SetDimmed(false);
             gameObject.SetActive(false);

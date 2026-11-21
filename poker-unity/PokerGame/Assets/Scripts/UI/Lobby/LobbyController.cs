@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Poker.Core;
 using Poker.Network;
+using Poker.Platform;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -17,15 +18,13 @@ namespace Poker.UI.Lobby
     /// </summary>
     public class LobbyController : MonoBehaviour
     {
-        private static readonly string[] Modes = { TableModes.Bots, TableModes.Friends }; // order of modeGroup's buttons
-
         [Header("Header")]
         [SerializeField] private TMP_Text welcomeText;
         [SerializeField] private Button logoutButton;
 
         [Header("Create / join")]
-        [SerializeField] private OptionGroup modeGroup;  // 0 = bots, 1 = friends
-        [SerializeField] private OptionGroup seatGroup;  // button i = GameRules.MinSeats + i seats
+        [SerializeField] private OptionButtonGroup modeGroup;  // buttons in TableModes.LobbyOrder
+        [SerializeField] private OptionButtonGroup seatGroup;  // button i = GameRules.MinSeats + i seats
         [SerializeField] private TMP_Text modeHintText;
         [SerializeField] private TMP_InputField tableNameInput;
         [SerializeField] private Button createButton;
@@ -45,7 +44,7 @@ namespace Poker.UI.Lobby
         private NetworkManager Net => NetworkManager.Instance;
         private AuthManager Auth => AuthManager.Instance;
 
-        private string SelectedMode => Modes[Mathf.Clamp(modeGroup.Selected, 0, Modes.Length - 1)];
+        private string SelectedMode => TableModes.LobbyOrder[Mathf.Clamp(modeGroup.Selected, 0, TableModes.LobbyOrder.Length - 1)];
         private int SelectedSeats => GameRules.MinSeats + Mathf.Max(0, seatGroup.Selected);
 
         private void Awake() => AppServices.EnsureExists();
@@ -60,7 +59,7 @@ namespace Poker.UI.Lobby
                 return;
             }
 
-            inviteToJoin = InviteLink.TakePending();
+            inviteToJoin = InviteLinkService.TakePending();
 
             // Reconnected while still seated at a table: go straight back to it,
             // unless an invite link asks for a different table.
@@ -86,7 +85,7 @@ namespace Poker.UI.Lobby
             Net.TableStateReceived += OnSeated;
             Net.ServerErrorReceived += toast.Show;
             Net.AuthRejected += BackToSplash;
-            InviteLink.Received += OnInviteReceived;
+            InviteLinkService.Received += OnInviteReceived;
 
             ShowTables(new List<TableSummary>());
             if (Net.IsConnected)
@@ -99,7 +98,7 @@ namespace Poker.UI.Lobby
 
         private void OnDestroy()
         {
-            InviteLink.Received -= OnInviteReceived;
+            InviteLinkService.Received -= OnInviteReceived;
             if (Net == null) return;
             Net.SessionStarted -= OnSessionStarted;
             Net.TableListReceived -= ShowTables;
@@ -118,14 +117,14 @@ namespace Poker.UI.Lobby
 
         private void OnInviteReceived(string code)
         {
-            inviteToJoin = InviteLink.TakePending() ?? code;
+            inviteToJoin = InviteLinkService.TakePending() ?? code;
             if (Net.IsConnected) JoinInvite();
         }
 
         private void JoinInvite()
         {
             if (inviteToJoin == null) return;
-            toast.Show($"Joining table {inviteToJoin}...");
+            toast.Show(string.Format(LobbyTexts.JoiningInvite, inviteToJoin));
             Net.JoinTable(inviteToJoin);
             inviteToJoin = null;
         }
@@ -134,8 +133,8 @@ namespace Poker.UI.Lobby
 
         private void SetUpCreateOptions()
         {
-            int savedMode = System.Array.IndexOf(Modes, PlayerPrefs.GetString(PrefsKeys.CreateMode, TableModes.Friends));
-            int savedSeats = PlayerPrefs.GetInt(PrefsKeys.CreateSeats, 4);
+            int savedMode = System.Array.IndexOf(TableModes.LobbyOrder, PlayerPrefs.GetString(PrefsKeys.CreateMode, TableModes.Friends));
+            int savedSeats = PlayerPrefs.GetInt(PrefsKeys.CreateSeats, GameRules.DefaultSeats);
             modeGroup.Select(Mathf.Max(0, savedMode), notify: false);
             seatGroup.Select(Mathf.Clamp(savedSeats, GameRules.MinSeats, GameRules.MaxSeats) - GameRules.MinSeats, notify: false);
             UpdateModeHint();
@@ -156,8 +155,8 @@ namespace Poker.UI.Lobby
             int seats = SelectedSeats;
             int bots = seats - 1;
             modeHintText.text = SelectedMode == TableModes.Bots
-                ? $"You + {bots} bot{(bots == 1 ? "" : "s")}. The game starts right away."
-                : $"You get a room code to share. The game starts when all {seats} seats are filled.";
+                ? string.Format(LobbyTexts.BotsHint, bots, bots == 1 ? "" : "s")
+                : string.Format(LobbyTexts.FriendsHint, seats);
         }
 
         private void CreateTable()
@@ -172,7 +171,7 @@ namespace Poker.UI.Lobby
             string code = codeInput.text.Trim();
             if (code.Length != GameRules.TableCodeLength)
             {
-                toast.Show($"Table codes have {GameRules.TableCodeLength} letters.");
+                toast.Show(string.Format(LobbyTexts.BadCodeLength, GameRules.TableCodeLength));
                 return;
             }
             Net.JoinTable(code);

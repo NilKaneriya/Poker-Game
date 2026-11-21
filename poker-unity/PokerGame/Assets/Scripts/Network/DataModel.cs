@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace Poker.Network
 {
     /// <summary>
-    /// Every serialized payload exchanged with the server, grouped in one place.
-    /// Field names are lowercase on purpose so they map 1:1 to the server's JSON
+    /// Every data shape used by the game, grouped in one place: the payloads exchanged
+    /// with the server, plus a few client-only models at the end.
+    /// Payload field names are lowercase on purpose so they map 1:1 to the server's JSON
     /// (serialized with Newtonsoft.Json). Use with: using static Poker.Network.DataModel;
     /// </summary>
     public static class DataModel
@@ -185,6 +186,33 @@ namespace Poker.Network
         {
             public string action;
             public int amount;
+        }
+
+        // ---------- Client-only models (never sent over the network) ----------
+
+        /// <summary>One row of the hand-rankings hint chart (values in Constants.HandChart).</summary>
+        public class HandChartEntry
+        {
+            public readonly int Rank;            // Constants.HandRanks value; name = HandRanks.Names[Rank]
+            public readonly string Description;
+            public readonly int MadeBy;          // how many of Cards form the hand (shown in gold)
+            public readonly string[] Cards;      // example cards, server codes ("Ah", "Td")
+
+            public HandChartEntry(int rank, string description, int madeBy, params string[] cards)
+            {
+                Rank = rank;
+                Description = description;
+                MadeBy = madeBy;
+                Cards = cards;
+            }
+        }
+
+        /// <summary>Invite to a table, as shared with friends.</summary>
+        public class TableInvite
+        {
+            public string Code;
+            public string Link;      // null when there is no web address to share
+            public string Message;   // text without the link
         }
     }
 }

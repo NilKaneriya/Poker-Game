@@ -40,12 +40,21 @@ namespace Poker.UI.Game
         [SerializeField] private Image timerRing; // Image type Filled (radial)
         [SerializeField] private Transform pulseTarget;
 
-        // Avatar colours are picked from the player id so each player keeps theirs.
-        private static readonly Color[] AvatarColors =
-        {
-            new Color(0.95f, 0.45f, 0.35f), new Color(0.35f, 0.65f, 0.95f), new Color(0.6f, 0.45f, 0.9f),
-            new Color(0.3f, 0.8f, 0.6f), new Color(0.98f, 0.7f, 0.25f), new Color(0.9f, 0.4f, 0.7f),
-        };
+        [Header("Your hand (bottom seat only)")]
+        [Tooltip("Pill under the chips showing your current hand, e.g. 'One Pair'. Optional.")]
+        [SerializeField] private GameObject handRankRoot;
+        [SerializeField] private TMP_Text handRankText;
+
+        [Header("Animation")]
+        [Tooltip("Where hole cards are dealt from (the middle of the table).")]
+        [SerializeField] private Transform dealOrigin;
+
+        /// <summary>Wait before this seat's cards fly in, so seats are dealt one after another.</summary>
+        public float DealDelay { get; set; }
+        /// <summary>Where this player's chips leave from / arrive at (the name plate).</summary>
+        public Vector3 ChipPosition => pulseTarget.position;
+        /// <summary>Where this player's bet sits on the table.</summary>
+        public Vector3 BetPosition => betRoot.transform.position;
 
         private int shownChips = -1;
         private bool isTurn;
@@ -58,20 +67,38 @@ namespace Poker.UI.Game
             emptyRoot.SetActive(true);
             shownChips = -1;
             SetTurn(false, 0, 0);
+            SetHandRank(null);
             foreach (var card in cards) card.Clear();
+        }
+
+        /// <summary>Little bounce on the name plate, e.g. when the pot lands on a winner.</summary>
+        public void PunchPlate() => UIAnim.Punch(pulseTarget, 0.12f);
+
+        /// <summary>Show (or hide, with null) the current-hand pill under the chips.</summary>
+        public void SetHandRank(string handName)
+        {
+            if (handRankRoot == null) return;
+            bool show = !string.IsNullOrEmpty(handName);
+            if (!show) { handRankRoot.SetActive(false); return; }
+
+            bool changed = !handRankRoot.activeSelf || handRankText.text != handName;
+            handRankRoot.SetActive(true);
+            handRankText.text = handName;
+            if (changed) UIAnim.PopIn(handRankRoot.transform, 0.3f); // e.g. the flop just made your pair
         }
 
         /// <param name="seat">Public seat info.</param>
         /// <param name="hand">This seat's state in the running hand, or null.</param>
         /// <param name="holeCards">Cards to show face up (ours, or revealed at showdown); null = backs if in hand.</param>
-        public void Show(SeatInfo seat, SeatHandInfo hand, List<string> holeCards, bool isDealer)
+        /// <param name="hideBet">The hand is over: bets have gone to the pot, so don't draw them.</param>
+        public void Show(SeatInfo seat, SeatHandInfo hand, List<string> holeCards, bool isDealer, bool hideBet = false)
         {
             emptyRoot.SetActive(false);
             occupiedRoot.SetActive(true);
 
             nameText.text = seat.name;
             initialText.text = string.IsNullOrEmpty(seat.name) ? "?" : seat.name.Substring(0, 1).ToUpperInvariant();
-            avatarBackground.color = AvatarColors[ColorIndex(seat.playerId)];
+            avatarBackground.color = UIColors.AvatarPalette[ColorIndex(seat.playerId)];
             offlineBadge.SetActive(!seat.connected);
             dealerButton.SetActive(isDealer);
 
@@ -81,20 +108,28 @@ namespace Poker.UI.Game
                 shownChips = seat.chips;
             }
 
-            ShowHand(hand, holeCards);
+            ShowHand(hand, holeCards, hideBet);
         }
 
-        private void ShowHand(SeatHandInfo hand, List<string> holeCards)
+        private void ShowHand(SeatHandInfo hand, List<string> holeCards, bool hideBet)
         {
             bool inHand = hand != null;
             bool folded = inHand && hand.folded;
             occupiedGroup.alpha = folded ? 0.5f : 1f;
+
+            // No cards showing yet and now in a hand: they are being dealt.
+            bool dealing = inHand && !folded && !cards[0].gameObject.activeSelf;
 
             for (int i = 0; i < cards.Length; i++)
             {
                 if (!inHand || folded) cards[i].Clear();
                 else if (holeCards != null && i < holeCards.Count) cards[i].ShowFace(holeCards[i]);
                 else cards[i].ShowBack();
+            }
+
+            if (dealing && dealOrigin != null)
+            {
+                for (int i = 0; i < cards.Length; i++) cards[i].FlyIn(dealOrigin.position, DealDelay + i * AnimationTimings.DealCardStagger);
             }
 
             string action = !inHand ? null : hand.allIn ? "ALL-IN" : hand.lastAction?.ToUpperInvariant();
@@ -105,7 +140,7 @@ namespace Poker.UI.Game
                 UIAnim.PopIn(actionBadge.transform, 0.25f);
             }
 
-            bool hasBet = inHand && hand.bet > 0;
+            bool hasBet = inHand && hand.bet > 0 && !hideBet;
             betRoot.SetActive(hasBet);
             if (hasBet && betText.text != CardFormat.Chips(hand.bet))
             {
@@ -148,7 +183,7 @@ namespace Poker.UI.Game
         {
             int sum = 0;
             if (playerId != null) foreach (char c in playerId) sum += c;
-            return sum % AvatarColors.Length;
+            return sum % UIColors.AvatarPalette.Length;
         }
 
         private void UpdateTimerRing()

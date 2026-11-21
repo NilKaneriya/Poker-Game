@@ -1,21 +1,21 @@
 using System;
+using Poker.Core;
 using UnityEngine;
 using static Poker.Core.Constants;
+using static Poker.Network.DataModel;
 
-namespace Poker.Core
+namespace Poker.Platform
 {
     /// <summary>
-    /// Invite links of the form  https://your-site/poker/?room=ABCDE.
+    /// Builds and reads invite links of the form  https://your-site/poker/?room=ABCDE.
     ///
     /// Opening one stores the room code as "pending"; the Lobby joins that table as soon
     /// as the player is signed in and connected (after the login screen if needed).
     /// Sources: the WebGL page address at startup, and Application.deepLinkActivated
     /// for builds set up to receive deep links (e.g. Android intent filters).
     /// </summary>
-    public static class InviteLink
+    public static class InviteLinkService
     {
-        public const string QueryKey = "room";
-
         /// <summary>A link was opened while the game was already running.</summary>
         public static event Action<string> Received;
 
@@ -45,8 +45,30 @@ namespace Poker.Core
         {
             string code = pending;
             pending = null;
-            if (code != null) ShareUtil.RemoveUrlParam(QueryKey); // a page reload must not join again
+            if (code != null) ShareService.RemoveUrlParam(InviteLinks.QueryKey); // a page reload must not join again
             return code;
+        }
+
+        /// <summary>Everything needed to invite friends to this table.</summary>
+        public static TableInvite CreateInvite(TableState table) => new TableInvite
+        {
+            Code = table.code,
+            Link = BuildLink(table.code),
+            Message = string.Format(GameTexts.InviteMessage, table.name, table.code),
+        };
+
+        /// <summary>Link that opens the game and joins this table, or null if there is no web address to share.</summary>
+        public static string BuildLink(string code)
+        {
+            string baseUrl = Application.platform == RuntimePlatform.WebGLPlayer
+                ? Application.absoluteURL
+                : ServerConfig.Load().inviteBaseUrl;
+            if (string.IsNullOrWhiteSpace(baseUrl)) return null;
+
+            baseUrl = baseUrl.Trim();
+            int cut = baseUrl.IndexOfAny(new[] { '?', '#' });
+            if (cut >= 0) baseUrl = baseUrl.Substring(0, cut);
+            return $"{baseUrl}?{InviteLinks.QueryKey}={Uri.EscapeDataString(code)}";
         }
 
         /// <summary>The room code in a link's query string, or null if there is no valid one.</summary>
@@ -63,25 +85,11 @@ namespace Poker.Core
             foreach (string part in query.Split('&'))
             {
                 int eq = part.IndexOf('=');
-                if (eq < 0 || !part.Substring(0, eq).Equals(QueryKey, StringComparison.OrdinalIgnoreCase)) continue;
+                if (eq < 0 || !part.Substring(0, eq).Equals(InviteLinks.QueryKey, StringComparison.OrdinalIgnoreCase)) continue;
                 string code = Uri.UnescapeDataString(part.Substring(eq + 1)).Trim().ToUpperInvariant();
                 return IsValidCode(code) ? code : null;
             }
             return null;
-        }
-
-        /// <summary>Link that opens the game and joins this table, or null if there is no web address to share.</summary>
-        public static string Build(string code)
-        {
-            string baseUrl = Application.platform == RuntimePlatform.WebGLPlayer
-                ? Application.absoluteURL
-                : ServerConfig.Load().inviteBaseUrl;
-            if (string.IsNullOrWhiteSpace(baseUrl)) return null;
-
-            baseUrl = baseUrl.Trim();
-            int cut = baseUrl.IndexOfAny(new[] { '?', '#' });
-            if (cut >= 0) baseUrl = baseUrl.Substring(0, cut);
-            return $"{baseUrl}?{QueryKey}={Uri.EscapeDataString(code)}";
         }
 
         private static bool IsValidCode(string code)

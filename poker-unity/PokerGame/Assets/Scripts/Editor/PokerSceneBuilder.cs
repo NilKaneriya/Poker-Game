@@ -13,6 +13,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static Poker.EditorTools.UIFactory;
 using static Poker.Core.Constants;
+using static Poker.Network.DataModel;
 
 namespace Poker.EditorTools
 {
@@ -396,7 +397,7 @@ namespace Poker.EditorTools
             botsButton.GetComponent<RectTransform>().At(-142, 0, 274, 60);
             var friendsButton = MakeButton(modeRow, "FriendsButton", "Play with friends", Theme.PanelLight, Theme.Text, 24);
             friendsButton.GetComponent<RectTransform>().At(142, 0, 274, 60);
-            var modeGroup = modeRow.gameObject.AddComponent<OptionGroup>();
+            var modeGroup = modeRow.gameObject.AddComponent<OptionButtonGroup>();
             WireArray(modeGroup, "options", new Object[] { botsButton, friendsButton });
 
             // Table size
@@ -411,7 +412,7 @@ namespace Poker.EditorTools
                 b.GetComponent<RectTransform>().At((i - (seatChoices - 1) / 2f) * 84, 0, 72, 52);
                 seatButtons[i] = b;
             }
-            var seatGroup = seatRow.gameObject.AddComponent<OptionGroup>();
+            var seatGroup = seatRow.gameObject.AddComponent<OptionButtonGroup>();
             WireArray(seatGroup, "options", seatButtons);
 
             var modeHint = MakeText(create.transform, "ModeHint", "", 21, Theme.Muted, TextAlignmentOptions.Left);
@@ -530,7 +531,31 @@ namespace Poker.EditorTools
             // Seats
             var seatsRoot = Node("Seats", canvas).Fill();
             var seats = new SeatView[SeatPositions.Length];
-            for (int i = 0; i < seats.Length; i++) seats[i] = BuildSeat(seatsRoot, i);
+            for (int i = 0; i < seats.Length; i++)
+            {
+                seats[i] = BuildSeat(seatsRoot, i);
+                Wire(seats[i], "dealOrigin", board); // hole cards are dealt from the middle of the table
+            }
+
+            // Flying chips (bets, pot collection, pot to winner) draw above seats and pot.
+            var chipLayer = Node("ChipLayer", canvas).Fill();
+            var chipTemplate = Img(chipLayer, "ChipTemplate", UISprites.Circle, Color.white);
+            chipTemplate.rectTransform.At(0, 0, 30, 30);
+            Img(chipTemplate.transform, "Edge", UISprites.Ring, Color.white.WithAlpha(0.8f)).rectTransform.Fill(3, 3, 3, 3);
+            chipTemplate.gameObject.SetActive(false);
+            var chipAnimator = chipLayer.gameObject.AddComponent<ChipAnimator>();
+            Wire(chipAnimator, "chipTemplate", chipTemplate.rectTransform);
+
+            // "THE FLOP" etc., under the board for a moment when a street starts.
+            var stageBannerBg = Panel(canvas, "StageBanner", Theme.Dark.WithAlpha(0.85f), 30f);
+            stageBannerBg.rectTransform.At(0, -160, 460, 74);
+            var stageBannerGroup = Group(stageBannerBg, 0f);
+            var stageBannerText = MakeText(stageBannerBg.transform, "Label", "THE FLOP", 44, Theme.Gold, bold: true);
+            stageBannerText.rectTransform.Fill(10, 10, 0, 0);
+            stageBannerText.characterSpacing = 10;
+            var stageBanner = stageBannerBg.gameObject.AddComponent<StageBannerView>();
+            Wire(stageBanner, "group", stageBannerGroup);
+            Wire(stageBanner, "label", stageBannerText);
 
             var waitingRoom = BuildWaitingRoom(canvas);
 
@@ -558,21 +583,41 @@ namespace Poker.EditorTools
             var toast = BuildToast(canvas, new Vector2(0.5f, 1f), -12);
             var result = BuildResultPanel(canvas);
 
+            // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
+            var rankingsButton = MakeButton(canvas, "HandRankingsButton", "♠  Hand rankings", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 24);
+            rankingsButton.GetComponent<RectTransform>().Pin(new Vector2(0f, 0f), 28, 28, 250, 60);
+            var rankings = BuildHandRankingsPanel(canvas);
+
             var controller = AddController<GameController>("GameController");
             Wire(controller, "tableNameText", tableName);
             Wire(controller, "codeText", codeText);
             Wire(controller, "copyCodeButton", copy);
             Wire(controller, "blindsText", blinds);
             Wire(controller, "leaveButton", leave);
-            WireArray(controller, "seats", seats);
-            WireArray(controller, "boardCards", boardCards);
-            Wire(controller, "potText", potText);
-            Wire(controller, "potRoot", pot.gameObject);
-            Wire(controller, "stageText", stage);
-            Wire(controller, "waitingText", waiting);
+
+            // Seats, board and the animator that plays changes between snapshots
+            var seatsView = seatsRoot.gameObject.AddComponent<SeatsView>();
+            WireArray(seatsView, "seats", seats);
+            var boardView = board.gameObject.AddComponent<BoardView>();
+            WireArray(boardView, "boardCards", boardCards);
+            Wire(boardView, "potRoot", pot.gameObject);
+            Wire(boardView, "potText", potText);
+            Wire(boardView, "stageText", stage);
+            Wire(boardView, "waitingText", waiting);
+            var animator = chipLayer.gameObject.AddComponent<TableChangeAnimator>();
+            Wire(animator, "chips", chipAnimator);
+            Wire(animator, "banner", stageBanner);
+            Wire(animator, "seats", seatsView);
+            Wire(animator, "board", boardView);
+
+            Wire(controller, "seats", seatsView);
+            Wire(controller, "board", boardView);
+            Wire(controller, "animator", animator);
             Wire(controller, "waitingRoom", waitingRoom);
             Wire(controller, "actionBar", actionBar);
             Wire(controller, "resultPanel", result);
+            Wire(controller, "handRankingsPanel", rankings);
+            Wire(controller, "handRankingsButton", rankingsButton);
             Wire(controller, "toast", toast);
 
             return Save(scene, SceneNames.Game);
@@ -636,8 +681,23 @@ namespace Poker.EditorTools
             MakeText(dealer.transform, "D", "D", 24, Theme.Dark, bold: true).rectTransform.Fill();
             dealer.gameObject.SetActive(false);
 
+            // Your seat: current hand ("One Pair", "Flush"...) right under the chips,
+            // with your last action below it.
+            GameObject handRank = null;
+            TextMeshProUGUI handRankText = null;
+            if (isMe)
+            {
+                var rankPill = Panel(occupied, "HandRank", Theme.Dark.WithAlpha(0.92f), 17f);
+                rankPill.rectTransform.At(0, -90, 220, 34);
+                Img(rankPill.transform, "Accent", UISprites.Circle, Theme.Gold).rectTransform.Pin(new Vector2(0f, 0.5f), 12, 0, 12, 12);
+                handRankText = MakeText(rankPill.transform, "Label", "One Pair", 20, Theme.Gold, bold: true);
+                handRankText.rectTransform.Fill(28, 12, 0, 0);
+                handRank = rankPill.gameObject;
+                handRank.SetActive(false);
+            }
+
             var action = Panel(occupied, "ActionBadge", Theme.Dark.WithAlpha(0.9f), 16f);
-            action.rectTransform.At(0, -88, 140, 34);
+            action.rectTransform.At(0, isMe ? -128 : -88, 140, 34);
             var actionText = MakeText(action.transform, "Label", "CHECK", 18, Theme.Gold, bold: true);
             actionText.rectTransform.Fill();
             action.gameObject.SetActive(false);
@@ -670,6 +730,11 @@ namespace Poker.EditorTools
             Wire(view, "turnGlow", glow.gameObject);
             Wire(view, "timerRing", ring);
             Wire(view, "pulseTarget", body.transform);
+            if (handRank != null)
+            {
+                Wire(view, "handRankRoot", handRank);
+                Wire(view, "handRankText", handRankText);
+            }
             occupied.gameObject.SetActive(false);
             return view;
         }
@@ -780,6 +845,95 @@ namespace Poker.EditorTools
             Wire(view, "startButton", start);
             root.gameObject.SetActive(false);
             return view;
+        }
+
+        /// <summary>Overlay with the 10 poker hands (best first, example cards) and the basic rules.</summary>
+        private static HandRankingsPanel BuildHandRankingsPanel(Transform canvas)
+        {
+            var root = Node("HandRankingsPanel", canvas).Fill();
+            var group = Group(root, 0f);
+            var dim = Img(root, "Dim", null, Color.black.WithAlpha(0.7f), raycast: true);
+            dim.rectTransform.Fill();
+            var backdrop = dim.gameObject.AddComponent<Button>(); // click outside the card to close
+            backdrop.transition = Selectable.Transition.None;
+
+            var card = Panel(root, "Card", Theme.Panel, 30f);
+            card.rectTransform.At(0, 0, 1560, 960);
+            card.raycastTarget = true; // clicks on the card must not reach the backdrop
+            Panel(card.transform, "HeaderBar", Theme.Gold, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 320, 12);
+
+            MakeText(card.transform, "Title", "Hand rankings", 44, Theme.Gold, TextAlignmentOptions.Left, bold: true)
+                .rectTransform.Pin(new Vector2(0f, 1f), 44, -34, 700, 56);
+            MakeText(card.transform, "Subtitle", "Strongest at the top. Gold cards make the hand; the faded ones are kickers.", 22, Theme.Muted, TextAlignmentOptions.Left)
+                .rectTransform.Pin(new Vector2(0f, 1f), 44, -90, 1000, 32);
+            var close = MakeButton(card.transform, "CloseButton", "X", Theme.PanelLight, Theme.Text, 30, 30f);
+            close.GetComponent<RectTransform>().Pin(new Vector2(1f, 1f), -28, -28, 64, 64);
+            var currentHand = MakeText(card.transform, "CurrentHand", "Your hand shows here once cards are dealt", 28, Theme.Text, TextAlignmentOptions.Right);
+            currentHand.rectTransform.Pin(new Vector2(1f, 1f), -110, -38, 640, 44);
+
+            // Left: one row per hand
+            var list = Node("Rankings", card.transform).At(-300, -60, 900, 790);
+            var cards = new System.Collections.Generic.List<Object>();
+            var rowImages = new System.Collections.Generic.List<Object>();
+            var yourHandTags = new System.Collections.Generic.List<Object>();
+            const float rowHeight = 79f;
+            for (int i = 0; i < HandChart.Entries.Length; i++)
+            {
+                HandChartEntry hand = HandChart.Entries[i];
+                var row = Panel(list, "Row" + (i + 1), Theme.PanelLight.WithAlpha(i % 2 == 0 ? 0.45f : 0.2f), 16f);
+                row.rectTransform.Pin(new Vector2(0.5f, 1f), 0, -i * rowHeight, 900, rowHeight - 7);
+
+                var badge = Img(row.transform, "Rank", UISprites.Circle, i < 3 ? Theme.Gold : Theme.Muted);
+                badge.rectTransform.Pin(new Vector2(0f, 0.5f), 14, 0, 46, 46);
+                MakeText(badge.transform, "Number", (i + 1).ToString(), 24, Theme.Dark, bold: true).rectTransform.Fill();
+
+                MakeText(row.transform, "Name", HandRanks.Names[hand.Rank], 27, Theme.Text, TextAlignmentOptions.Left, bold: true)
+                    .rectTransform.Pin(new Vector2(0f, 0.5f), 76, 13, 385, 34);
+                MakeText(row.transform, "Description", hand.Description, 18, Theme.Muted, TextAlignmentOptions.Left)
+                    .rectTransform.Pin(new Vector2(0f, 0.5f), 76, -17, 390, 28);
+
+                // Shown only on the row matching the player's current hand.
+                var tag = Panel(row.transform, "YourHandTag", Theme.Gold, 15f);
+                tag.rectTransform.Pin(new Vector2(1f, 0.5f), -306, 0, 124, 32);
+                MakeText(tag.transform, "Label", "YOUR HAND", 16, Theme.Dark, bold: true).rectTransform.Fill();
+                tag.gameObject.SetActive(false);
+                rowImages.Add(row);
+                yourHandTags.Add(tag.gameObject);
+
+                var cardRow = Node("Cards", row.transform).Pin(new Vector2(1f, 0.5f), -16, 0, 280, 66);
+                for (int c = 0; c < hand.Cards.Length; c++)
+                {
+                    var view = BuildCard(cardRow, "Card" + c, 46, 64);
+                    view.GetComponent<RectTransform>().anchoredPosition = new Vector2((c - 2) * 54, 0);
+                    cards.Add(view);
+                }
+            }
+
+            // Right: how to play
+            var rules = Panel(card.transform, "Rules", Theme.Input, 22f);
+            rules.rectTransform.At(478, -60, 540, 790);
+            MakeText(rules.transform, "Title", "How to play", 30, Theme.Gold, TextAlignmentOptions.Left, bold: true)
+                .rectTransform.Pin(new Vector2(0f, 1f), 30, -24, 480, 42);
+            var body = MakeText(rules.transform, "Body", HandChart.HowToPlay, 21, Theme.Text, TextAlignmentOptions.TopLeft);
+            body.rectTransform.Fill(30, 30, 84, 24);
+            body.lineSpacing = 8;
+            body.paragraphSpacing = 6;
+            body.overflowMode = TextOverflowModes.Overflow;
+            body.enableAutoSizing = true; // shrink a little if the text ever outgrows the box
+            body.fontSizeMin = 16;
+            body.fontSizeMax = 21;
+
+            var panel = root.gameObject.AddComponent<HandRankingsPanel>();
+            Wire(panel, "group", group);
+            Wire(panel, "card", card.rectTransform);
+            Wire(panel, "closeButton", close);
+            Wire(panel, "backdropButton", backdrop);
+            WireArray(panel, "exampleCards", cards.ToArray());
+            Wire(panel, "currentHandText", currentHand);
+            WireArray(panel, "rowBackgrounds", rowImages.ToArray());
+            WireArray(panel, "yourHandTags", yourHandTags.ToArray());
+            root.gameObject.SetActive(false);
+            return panel;
         }
 
         private static ResultPanel BuildResultPanel(Transform canvas)
