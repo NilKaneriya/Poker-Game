@@ -105,6 +105,21 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 ### `src/bots/BotPlayer.js`
 Three personalities (easy / normal / hard). Each one compares **hand strength** with the **price of calling**, raises with strong hands and sometimes bluffs.
 
+### `src/chat/`: table chat (a separate module)
+Chat never imports game code (a unit test enforces this). `src/index.js` calls `attachChat(io, { tableOf, roomOf, gameEvents })`, which gives chat everything it needs.
+
+| File | Responsibility |
+|---|---|
+| `index.js` | `attachChat`: registers chat sockets and turns game events into system messages. |
+| `chatEvents.js` | Chat's own event names (`chatSend`, `getChat`, `chatMessage`, `chatHistory`, `chatError`). |
+| `chatHandlers.js` | Send (table members only, cleaned, rate limited, name from login) and history. |
+| `chatText.js` | Cleans text: strips control characters, collapses spaces, cuts to 140, masks swear words. |
+| `RateLimiter.js` | At most 5 messages per 10 s per player. |
+| `ChatStore.js` | Last 50 messages per table, in memory; cleared when the table closes. |
+| `systemMessages.js` | Wording for "Bob joined the table", "Ava won 300 with Flush"... |
+
+The game side only publishes neutral events through `network/gameEvents.js` (player joined / waiting / seated / left, bot replaced, hand finished, table closed). It does not know who listens.
+
 ### Tests and scripts
 - `npm test`: **54 unit tests** for cards, evaluator, pots, hands, table and bots.
 - `npm test`: also covers **player stats**.
@@ -207,6 +222,16 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `TurnTimerAlert` | Ticks once a second in the last 5 seconds of your turn (urgent in the last 3). |
 | **Preview/** `GamePreviewData` | Sample snapshots so the Game scene can be checked in the Editor without a server. |
 
+### Chat (`Assets/Scripts/Chat/`, namespace `Poker.Chat`): a separate module
+| Class | Responsibility |
+|---|---|
+| `ChatConstants` | Chat event names, limits, texts and quick phrases (kept inside the module). |
+| `ChatModels` | Chat payload shapes. |
+| `ChatClient` | Chat connection. Uses the socket only through `NetworkManager.Listen/Send`. Knows nothing about poker. |
+| `ChatMessageFormat` | One rich-text row per message; player text is shown literally (`<noparse>`), so typed tags can't change the UI. |
+| `ChatPanel` | "Chat" button with unread badge, message list, quick phrases, text box. |
+| `Editor/Chat/ChatPanelBuilder` | Builds the chat UI; the scene builder only calls `ChatPanelBuilder.Build(canvas, ...)`. |
+
 ### Editor
 | Class | Responsibility |
 |---|---|
@@ -243,7 +268,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
 
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**. **63 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
+- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**. **table chat (separate module)**. **72 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
 - Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
 **Before submitting**
@@ -270,6 +295,10 @@ Every requirement in the task brief is mapped to its implementation in the READM
 **How does the waiting room start for everyone at once?** The server flips `started` and deals; every client receives the same snapshot and closes its waiting room.
 
 **Why a second hand evaluator on the client?** Only to *show* "you have One Pair" instantly. It never decides a winner; the server's evaluator does.
+
+**How is chat separate from the game?** The game publishes events (`gameEvents.js`) and never imports chat. Chat gets three functions/objects from `index.js` (which table a player is at, its room, the events). A test fails if any chat file imports game code. In Unity, `Poker.Chat` has its own constants, models and client and uses the socket only through `NetworkManager.Listen/Send`. You could delete chat by removing two folders and two lines.
+
+**How is chat kept safe?** The server takes the name from the login, not the message; only table members can send or read; text is cleaned and cut to 140 characters; 5 messages per 10 s; a short swear-word list is masked; the client shows player text literally so it can't inject rich-text tags.
 
 **How did you keep the client code clean?** One responsibility per class, `GameController` only coordinates, all static data in `Constants`, all data shapes in `DataModel`, and folders named by role (Table, Panels, Presenters, Animation, Platform, Gameplay).
 

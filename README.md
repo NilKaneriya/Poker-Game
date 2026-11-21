@@ -67,9 +67,9 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test            # 63 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, waiting list
+npm test            # 72 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, waiting list, chat
 npm run test:e2e    # starts a throwaway server and plays through the network: login, join by code,
-                    # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat), stats, seat freed after disconnect
+                    # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat), stats, chat, seat freed after disconnect
 npm run play:bots   # watch real hands against bots in the console (against a running server)
 ```
 
@@ -205,6 +205,7 @@ editor tool, so the scenes are reproducible from code.
 | One retention feature | Player statistics (`StatsService.js`, lobby *Your stats*) |
 | Long-session notification with off switch | *Time for a break?* after 1 h (`SessionClock`, `BreakReminderPanel`), toggle in lobby |
 | Optional: sound and dealing animations | Dealing, chips, street banners; music and sound effects (placeholders made in code) with on/off |
+| Extra: table chat (separate module) | `poker-server/src/chat/` + `Assets/Scripts/Chat/`: table-only messages, quick phrases, unread badge, hand log ("Ava won 300 with Flush"), history for late joiners, 140-char limit, rate limit, swear-word masking, names from the login (tested) |
 | Optional: tests for ranking and pots | `test/handEvaluator.test.js`, `test/pots.test.js` (+ hand, table, bots, stats, e2e) |
 
 ---
@@ -236,6 +237,8 @@ editor tool, so the scenes are reproducible from code.
   is small on small screens; portrait is not supported.
 - **Placeholder audio.** Sounds and music are synthesized by an editor tool and can be
   replaced in `Resources/SoundLibrary`. Browsers start audio only after the first click.
+- **Chat history is in memory** and goes when the table closes; it is not moderated
+  beyond a short swear-word list and a rate limit (5 messages per 10 s).
 - **The Unity client has no automated tests.** The rules, pots, bots, stats and
   networking are tested on the server; the client is tested by hand (section 2).
 - **Break reminder** counts time since the game was opened on that device.
@@ -249,10 +252,20 @@ editor tool, so the scenes are reproducible from code.
 **Done:** everything in the brief's *What to build* sections 1-7 (see the checklist
 above), plus the optional sound effects, dealing and chip animations, and automated
 tests for hand ranking and pot distribution. Extras: invite links and share sheet,
-waiting room, hand rankings hint, and a WebGL build hosted by the server.
+waiting room, hand rankings hint, a WebGL build hosted by the server, joining a
+bots game by code (take a bot's seat after the hand), and table chat.
+
+**Chat is a separate module.** `poker-server/src/chat/` never imports game code: the
+game publishes neutral events (`network/gameEvents.js`: player joined, hand
+finished...), and `src/index.js` passes chat the three things it needs (which table a
+player is at, the table's socket room, and those events). A unit test fails if any
+chat file imports game code. In Unity, `Assets/Scripts/Chat/` (namespace
+`Poker.Chat`) has its own event names, models and client, and reaches the socket only
+through `NetworkManager.Listen/Send`. Removing chat means deleting those folders and
+two lines.
 
 **Left out:**
-- In-table text chat (optional extra).
+- Private messages, muting or reporting a player in chat (table chat only).
 - Persistent tables and refunds after a server crash (see Known issues).
 - Gameplay video (record a 3-player hand following section 2).
 
