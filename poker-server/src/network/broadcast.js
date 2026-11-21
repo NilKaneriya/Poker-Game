@@ -1,5 +1,6 @@
 const EVENTS = require('./events');
 const tables = require('../services/TableManager');
+const stats = require('../services/StatsService');
 const { buildPlayerView } = require('./playerView');
 
 const playerRoom = (playerId) => `player:${playerId}`;
@@ -16,4 +17,9 @@ function sendTableList(io) {
   io.emit(EVENTS.TABLE_LIST, tables.list());
 }
 
-module.exports = { playerRoom, tableRoom, sendTableState, sendTableList };
+/** A player's own statistics (only ever sent to that player). */
+function sendStats(io, playerId) {
+  io.to(playerRoom(playerId)).emit(EVENTS.STATS, stats.get(playerId));
+}
+
+module.exports = { playerRoom, tableRoom, sendTableState, sendTableList, sendStats };

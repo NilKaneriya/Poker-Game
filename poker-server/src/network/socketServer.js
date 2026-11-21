@@ -2,8 +2,9 @@ const EVENTS = require('./events');
 const { store } = require('../services/AccountStore');
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
-const { playerRoom, tableRoom } = require('./broadcast');
+const { playerRoom, tableRoom, sendStats } = require('./broadcast');
 const { runnerFor } = require('./TableRunner');
+const { startGrace, cancelGrace } = require('./reconnectGrace');
 const registerLobbyHandlers = require('./handlers/lobbyHandlers');
 const registerGameHandlers = require('./handlers/gameHandlers');
 
@@ -20,11 +21,14 @@ module.exports = (io) => {
   io.on('connection', (socket) => {
     const { playerId, name } = socket.data;
     socket.join(playerRoom(playerId));
-    socket.emit(EVENTS.SESSION, { playerId, username: name });
     log.info(`Connected ${name} (socket ${socket.id})`);
 
-    // Reconnect: put the player back at their table.
+    // Reconnect: put the player back at their table, seat and chips as they were.
+    cancelGrace(playerId);
     const table = tables.findByPlayer(playerId);
+    // tableCode tells the client whether its table still exists (it doesn't after a server restart).
+    socket.emit(EVENTS.SESSION, { playerId, username: name, tableCode: table?.code ?? null });
+    sendStats(io, playerId);
     if (table) {
       table.getSeat(playerId).connected = true;
       socket.join(tableRoom(table.code));
@@ -37,14 +41,14 @@ module.exports = (io) => {
 
     socket.on('disconnect', async (reason) => {
       log.info(`Disconnected ${name} (${reason})`);
-      // Same account may have another socket open (e.g. second tab); only mark
-      // the seat offline when none are left. The seat is kept so the player can return.
-      // TODO: remove the seat after config.reconnectGraceMs.
+      // The same account may have another socket open (e.g. a second tab); only mark
+      // the seat offline when none are left. The seat is kept for the grace period.
       const stillConnected = (await io.in(playerRoom(playerId)).fetchSockets()).length > 0;
       const current = tables.findByPlayer(playerId);
       if (current && !stillConnected) {
         current.getSeat(playerId).connected = false;
         runnerFor(io, current).update();
+        startGrace(io, playerId, name);
       }
     });
   });

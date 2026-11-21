@@ -3,8 +3,9 @@ const config = require('../../config');
 const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
-const { tableRoom, sendTableList } = require('../broadcast');
-const { runnerFor, removeRunner } = require('../TableRunner');
+const { tableRoom, sendTableList, sendStats } = require('../broadcast');
+const { runnerFor } = require('../TableRunner');
+const { removeFromTable } = require('../seating');
 
 const MAX_TABLE_NAME_LENGTH = 24;
 const VALID_MODES = new Set(Object.values(TABLE_MODES));
@@ -26,20 +27,8 @@ module.exports = (io, socket) => {
   const fail = (message) => socket.emit(EVENTS.ERROR, { message });
 
   function leaveCurrentTable() {
-    const table = tables.findByPlayer(playerId);
-    if (!table) return;
-    table.removePlayer(playerId); // folds them if a hand is running
-    socket.leave(tableRoom(table.code));
-    log.info(`${name} left table ${table.code}`);
-
-    if (table.players.every((p) => p.isBot)) {
-      removeRunner(table.code);
-      tables.remove(table.code);
-      log.info(`Table ${table.code} closed`);
-    } else {
-      runnerFor(io, table).update();
-    }
-    sendTableList(io);
+    const table = removeFromTable(io, playerId, name); // folds them if a hand is running
+    if (table) socket.leave(tableRoom(table.code));
   }
 
   function seat(table) {
@@ -52,6 +41,7 @@ module.exports = (io, socket) => {
   }
 
   socket.on(EVENTS.LIST_TABLES, () => socket.emit(EVENTS.TABLE_LIST, tables.list()));
+  socket.on(EVENTS.GET_STATS, () => sendStats(io, playerId));
 
   socket.on(EVENTS.CREATE_TABLE, (payload) => {
     const { tableName, mode, maxSeats } = payload || {};

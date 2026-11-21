@@ -27,6 +27,13 @@ module.exports = {
   // How long a disconnected player's seat is kept before they are removed.
   reconnectGraceMs: num(process.env.RECONNECT_GRACE_MS, 120000),
 
+  // Player statistics (hands played/won, biggest pot, best hand)
+  statsFile: process.env.STATS_FILE || path.join(__dirname, '..', 'data', 'stats.json'),
+
+  // Optional: folder with a Unity WebGL build to serve from this server (same address
+  // for game and server, so a single deployment is enough). Empty = don't serve.
+  webglDir: process.env.WEBGL_DIR || path.join(__dirname, '..', 'public'),
+
   auth: {
     accountsFile: process.env.ACCOUNTS_FILE || path.join(__dirname, '..', 'data', 'accounts.json'),
     sessionTokenTtlMs: 12 * 60 * 60 * 1000, // without "remember me"
