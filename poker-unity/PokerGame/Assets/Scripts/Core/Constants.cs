@@ -30,6 +30,11 @@ namespace Poker.Core
             public const string Register = "/auth/register";
             public const string Me = "/auth/me";
             public const string Logout = "/auth/logout";
+
+            // Profile and settings (see poker-server/src/network/profileRoutes.js)
+            public const string MyProfile = "/profile/me";
+            public const string Profile = "/profile";
+            public const string Settings = "/profile/settings";
         }
 
         /// <summary>Socket.IO event names. Must match poker-server/src/network/events.js.</summary>
@@ -68,6 +73,48 @@ namespace Poker.Core
             public const string MusicOn = "poker.audio.music";      // 1 = on (default), 0 = off
             public const string SoundOn = "poker.audio.sound";
             public const string BreakReminders = "poker.wellbeing.breakReminders"; // 1 = on (default), 0 = off
+            public const string MusicVolume = "poker.audio.musicVolume";       // 0..1
+            public const string SoundVolume = "poker.audio.soundVolume";       // 0..1
+            public const string ChatEnabled = "poker.chat.enabled";
+            public const string ShowHandStrength = "poker.table.showHandStrength";
+            public const string FourColorDeck = "poker.table.fourColorDeck";
+        }
+
+        /// <summary>Settings sync with the server.</summary>
+        public static class SettingsSync
+        {
+            public const float SaveDelaySeconds = 1f; // dragging a slider sends one request, not fifty
+        }
+
+        /// <summary>
+        /// Player avatars: a colour and a card-suit symbol. Index = avatarId saved in the profile
+        /// (poker-server/src/services/profileRules.js AVATAR_COUNT must match Count).
+        /// </summary>
+        public static class Avatars
+        {
+            public static readonly Color[] Colors =
+            {
+                new Color32(239, 108, 87, 255), new Color32(76, 154, 242, 255), new Color32(155, 117, 232, 255),
+                new Color32(62, 196, 145, 255), new Color32(246, 182, 62, 255), new Color32(230, 104, 168, 255),
+                new Color32(43, 182, 196, 255), new Color32(214, 84, 84, 255), new Color32(120, 150, 70, 255),
+                new Color32(232, 140, 50, 255), new Color32(96, 110, 220, 255), new Color32(160, 160, 170, 255),
+            };
+            public static readonly string[] Symbols =
+            {
+                "\u2660", "\u2665", "\u2666", "\u2663", "\u2660", "\u2665",
+                "\u2666", "\u2663", "\u2660", "\u2665", "\u2666", "\u2663",
+            };
+            public static int Count => Colors.Length;
+            public static int Clamp(int avatarId) => avatarId >= 0 && avatarId < Count ? avatarId : 0;
+        }
+
+        /// <summary>Four-colour deck (setting): each suit its own colour, easier to read at a glance.</summary>
+        public static class SuitColors
+        {
+            public static readonly Color Red = new Color(0.86f, 0.15f, 0.2f);
+            public static readonly Color Black = new Color(0.1f, 0.12f, 0.16f);
+            public static readonly Color Blue = new Color32(37, 99, 235, 255);   // diamonds
+            public static readonly Color Green = new Color32(22, 140, 70, 255);  // clubs
         }
 
         /// <summary>Responsible play: a gentle reminder after a long session (can be turned off).</summary>
@@ -317,6 +364,41 @@ namespace Poker.Core
             public const string BreakReminders = "Break reminders: {0}";
             public const string On = "On";
             public const string Off = "Off";
+
+            // Settings panel
+            public const string Button = "Settings";
+            public const string Title = "Settings";
+            public const string AudioSection = "Audio";
+            public const string TableSection = "Table";
+            public const string PlaySection = "Responsible play";
+            public const string MusicVolume = "Music";
+            public const string SoundVolume = "Sound effects";
+            public const string ShowHandStrength = "Show my hand strength";
+            public const string FourColorDeck = "Four-colour deck";
+            public const string ChatEnabled = "Table chat";
+            public const string BreakReminderToggle = "Remind me to take a break";
+            public const string SyncedHint = "Saved to your account, so they follow you to any device.";
+            public const string LocalHint = "Saved on this device. Log in to keep them on your account.";
+            public const string Close = "Done";
+        }
+
+        public static class ProfileTexts
+        {
+            public const string Title = "Your profile";
+            public const string Edit = "Edit profile";
+            public const string DisplayName = "Display name";
+            public const string DisplayNameHint = "How others see you at the table";
+            public const string Bio = "About you";
+            public const string BioHint = "A short line, e.g. favourite hand (optional)";
+            public const string Avatar = "Avatar";
+            public const string Save = "Save";
+            public const string Saving = "Saving...";
+            public const string Saved = "Profile saved";
+            public const string Loading = "Loading...";
+            public const string Username = "Login name: <b>{0}</b>";
+            public const string MemberSince = "Playing since {0:MMMM yyyy}";
+            public const int DisplayNameMax = 16;
+            public const int BioMax = 80;
         }
 
         public static class WellbeingTexts
@@ -347,13 +429,6 @@ namespace Poker.Core
             public static readonly Color MarkedRow = new Color32(246, 199, 68, 70);
 
             public static readonly Color[] ChipPalette = { Red, Blue, Green, Gold, new Color32(30, 30, 36, 255) };
-
-            /// <summary>Avatar circles; each player always gets the same one (picked from their id).</summary>
-            public static readonly Color[] AvatarPalette =
-            {
-                new Color(0.95f, 0.45f, 0.35f), new Color(0.35f, 0.65f, 0.95f), new Color(0.6f, 0.45f, 0.9f),
-                new Color(0.3f, 0.8f, 0.6f), new Color(0.98f, 0.7f, 0.25f), new Color(0.9f, 0.4f, 0.7f),
-            };
         }
 
         // =====================================================================

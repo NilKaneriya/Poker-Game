@@ -7,7 +7,7 @@ namespace Poker.Core
     /// <summary>
     /// Responsible play: measures how long this session has lasted and raises ReminderDue
     /// after Wellbeing.FirstReminderMinutes (then every RepeatReminderMinutes) so the game can
-    /// suggest a break. Players can switch reminders off; the choice is saved.
+    /// suggest a break. Players can switch reminders off (saved by SettingsManager).
     /// Created once by AppServices and kept across scenes.
     /// </summary>
     public class SessionClock : MonoBehaviour
@@ -28,7 +28,7 @@ namespace Poker.Core
         private void Awake()
         {
             Instance = this;
-            RemindersOn = PlayerPrefs.GetInt(PrefsKeys.BreakReminders, 1) == 1;
+            RemindersOn = true; // SettingsManager applies the saved choice right after
             nextReminderAt = Wellbeing.FirstReminderMinutes * 60f;
         }
 
@@ -51,13 +51,13 @@ namespace Poker.Core
             nextReminderAt = Time.realtimeSinceStartup + Wellbeing.RepeatReminderMinutes * 60f;
         }
 
+        /// <summary>Called by SettingsManager (which also saves the choice).</summary>
         public void SetRemindersOn(bool on)
         {
+            if (RemindersOn == on) return;
             RemindersOn = on;
             if (!on) IsDue = false;
             else nextReminderAt = Mathf.Max(nextReminderAt, Time.realtimeSinceStartup + Wellbeing.RepeatReminderMinutes * 60f);
-            PlayerPrefs.SetInt(PrefsKeys.BreakReminders, on ? 1 : 0);
-            PlayerPrefs.Save();
             SettingsChanged?.Invoke();
         }
 

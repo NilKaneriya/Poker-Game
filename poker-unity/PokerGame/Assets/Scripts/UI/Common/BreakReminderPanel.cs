@@ -9,7 +9,7 @@ namespace Poker.UI
     /// <summary>
     /// Gentle "time for a break?" message after a long session (responsible play).
     /// No pressure: "Keep playing" closes it until the next reminder, "Don't remind me"
-    /// turns reminders off (they can be turned back on in the Lobby).
+    /// turns reminders off (they can be turned back on in Settings or the Lobby).
     /// </summary>
     public class BreakReminderPanel : MonoBehaviour
     {
@@ -26,7 +26,8 @@ namespace Poker.UI
         private void Start()
         {
             keepPlayingButton.onClick.AddListener(() => { Clock.Acknowledge(); Hide(); });
-            turnOffButton.onClick.AddListener(() => { Clock.SetRemindersOn(false); Hide(); });
+            // Through SettingsManager, so the choice is saved (and follows the account).
+            turnOffButton.onClick.AddListener(() => { SettingsManager.Instance.Change(s => s.breakReminders = false); Hide(); });
             Clock.ReminderDue += Show;
             if (Clock.IsDue) Show(); // fell due while another scene was loading
         }

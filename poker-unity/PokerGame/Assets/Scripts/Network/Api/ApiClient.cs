@@ -20,6 +20,9 @@ namespace Poker.Network
         public static IEnumerator Post<T>(string url, object body, string token, Action<T> onSuccess, Action<ApiFailure> onFailure) =>
             Send("POST", url, body, token, onSuccess, onFailure);
 
+        public static IEnumerator Put<T>(string url, object body, string token, Action<T> onSuccess, Action<ApiFailure> onFailure) =>
+            Send("PUT", url, body, token, onSuccess, onFailure);
+
         private static IEnumerator Send<T>(string method, string url, object body, string token,
             Action<T> onSuccess, Action<ApiFailure> onFailure)
         {

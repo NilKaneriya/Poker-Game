@@ -5,6 +5,15 @@ namespace Poker.Core
     /// </summary>
     public static class CardFormat
     {
+        /// <summary>Colour of a suit ('h', 'd', 'c', 's'). Four-colour deck: diamonds blue, clubs green.</summary>
+        public static UnityEngine.Color SuitColor(char suit, bool fourColor) => suit switch
+        {
+            'h' => Constants.SuitColors.Red,
+            'd' => fourColor ? Constants.SuitColors.Blue : Constants.SuitColors.Red,
+            'c' => fourColor ? Constants.SuitColors.Green : Constants.SuitColors.Black,
+            _ => Constants.SuitColors.Black,
+        };
+
         public static bool TryParse(string code, out string rank, out string suit, out bool isRed)
         {
             rank = suit = "";

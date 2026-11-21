@@ -21,6 +21,8 @@ namespace Poker.Core
             go.AddComponent<NetworkManager>(); // also adds SocketIOCommunicator (RequireComponent)
             go.AddComponent<AudioManager>();
             go.AddComponent<SessionClock>();
+            go.AddComponent<SettingsManager>(); // after Audio and Clock: it applies saved settings to them
+            go.AddComponent<ProfileManager>();
         }
     }
 }

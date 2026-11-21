@@ -20,8 +20,6 @@ namespace Poker.UI.Game
         [SerializeField] private GameObject highlight; // gold outline for winning cards
         [SerializeField] private CanvasGroup canvasGroup;
 
-        [SerializeField] private Color redSuit = new Color(0.86f, 0.15f, 0.2f);
-        [SerializeField] private Color blackSuit = new Color(0.1f, 0.12f, 0.16f);
 
         private enum Shown { Empty, Back, Face }
         private Shown shown = Shown.Empty;
@@ -29,6 +27,24 @@ namespace Poker.UI.Game
 
         private Vector3 homePosition; // where the layout put this card; deal animations return here
         private bool homeKnown;
+
+        // Four-colour deck setting: recolour the face shown right now when it changes.
+        private void OnEnable()
+        {
+            if (SettingsManager.Instance != null) SettingsManager.Instance.Changed += OnSettingsChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (SettingsManager.Instance != null) SettingsManager.Instance.Changed -= OnSettingsChanged;
+        }
+
+        private void OnSettingsChanged(Network.DataModel.UserSettings _)
+        {
+            if (shown == Shown.Face) ApplyFace(shownCode);
+        }
+
+        private static bool FourColor => SettingsManager.Instance != null && SettingsManager.Instance.Current.fourColorDeck;
 
         public void ShowFace(string code)
         {
@@ -110,9 +126,9 @@ namespace Poker.UI.Game
         {
             back.SetActive(false);
             face.SetActive(true);
-            if (!CardFormat.TryParse(code, out string rank, out string suit, out bool isRed)) return;
+            if (!CardFormat.TryParse(code, out string rank, out string suit, out _)) return;
 
-            Color color = isRed ? redSuit : blackSuit;
+            Color color = CardFormat.SuitColor(code[1], FourColor);
             rankText.text = rank;
             cornerSuitText.text = suit;
             centerSuitText.text = suit;

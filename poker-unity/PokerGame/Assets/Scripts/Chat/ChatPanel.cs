@@ -40,6 +40,7 @@ namespace Poker.Chat
         private ChatClient chat;
         private bool open;
         private int unread;
+        private bool switchedOn = true;
 
         private static string MyPlayerId => AuthManager.Instance != null ? AuthManager.Instance.PlayerId : null;
 
@@ -52,6 +53,7 @@ namespace Poker.Chat
 
             chat = ChatClient.Instance;
             if (chat == null) { toggleButton.gameObject.SetActive(false); return; } // no network (offline preview)
+            toggleButton.gameObject.SetActive(switchedOn);
 
             toggleButton.onClick.AddListener(() => SetOpen(!open));
             closeButton.onClick.AddListener(() => SetOpen(false));
@@ -92,7 +94,7 @@ namespace Poker.Chat
         {
             if (!AddRow(message)) return;
             bool fromMe = message.playerId == MyPlayerId;
-            if (!open && !fromMe && message.kind == Kinds.Player) SetUnread(unread + 1);
+            if (!open && switchedOn && !fromMe && message.kind == Kinds.Player) SetUnread(unread + 1);
             if (fromMe) statusText.text = "";
             ScrollToBottom();
         }
@@ -125,6 +127,20 @@ namespace Poker.Chat
             chat.Send(text);
             input.text = "";
             if (!Application.isMobilePlatform) input.ActivateInputField(); // keep typing on desktop
+        }
+
+        // ---------- Switch on / off ----------
+
+        /// <summary>
+        /// The player turned chat on or off (the scene passes in their setting; chat itself
+        /// doesn't read game settings). Off: no button, no window, no unread badge.
+        /// </summary>
+        public void SetSwitchedOn(bool on)
+        {
+            switchedOn = on;
+            if (!on) SetOpen(false);
+            SetUnread(0);
+            toggleButton.gameObject.SetActive(on && chat != null);
         }
 
         // ---------- View ----------

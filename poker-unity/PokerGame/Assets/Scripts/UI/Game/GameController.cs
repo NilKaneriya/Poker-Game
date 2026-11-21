@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Poker.Chat;
 using Poker.Core;
 using Poker.Network;
 using TMPro;
@@ -48,6 +49,7 @@ namespace Poker.UI.Game
         [SerializeField] private HandRankingsPanel handRankingsPanel;
         [SerializeField] private Button handRankingsButton;
         [SerializeField] private ToastView toast;
+        [SerializeField] private ChatPanel chat; // optional (chat module)
 
         [Header("Editor")]
         [Tooltip("When this scene is played without a server connection, show sample data so the layout can be checked.")]
@@ -80,6 +82,8 @@ namespace Poker.UI.Game
             Net.ServerErrorReceived += OnServerError;
             Net.AuthRejected += OnAuthRejected;
             Net.TableLost += OnTableLost;
+            SettingsManager.Instance.Changed += OnSettingsChanged;
+            OnSettingsChanged(SettingsManager.Instance.Current);
 
             actionBar.Hide();
             resultPanel.Hide();
@@ -97,6 +101,14 @@ namespace Poker.UI.Game
             Net.ServerErrorReceived -= OnServerError;
             Net.AuthRejected -= OnAuthRejected;
             Net.TableLost -= OnTableLost;
+            if (SettingsManager.Instance != null) SettingsManager.Instance.Changed -= OnSettingsChanged;
+        }
+
+        /// <summary>Settings that change what the table shows: chat on/off, hand strength hint.</summary>
+        private void OnSettingsChanged(UserSettings settings)
+        {
+            if (chat != null) chat.SetSwitchedOn(settings.chatEnabled);
+            if (table != null) myHand.Render(table);
         }
 
         private void WireInput()

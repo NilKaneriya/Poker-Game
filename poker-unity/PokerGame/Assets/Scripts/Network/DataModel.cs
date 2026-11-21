@@ -27,6 +27,47 @@ namespace Poker.Network
             public string token; // private login token, never shown to other players
             public string playerId;
             public string username;
+            public string displayName;
+            public int avatarId;
+        }
+
+        /// <summary>Every saved setting. Defaults match poker-server/src/services/profileRules.js.</summary>
+        [Serializable]
+        public class UserSettings
+        {
+            public bool musicOn = true;
+            public bool soundOn = true;
+            public float musicVolume = 0.6f;
+            public float soundVolume = 0.8f;
+            public bool breakReminders = true;
+            public bool chatEnabled = true;
+            public bool showHandStrength = true;
+            public bool fourColorDeck;
+
+            public UserSettings Copy() => (UserSettings)MemberwiseClone();
+        }
+
+        /// <summary>The logged-in player's own profile (GET /profile/me).</summary>
+        [Serializable]
+        public class UserProfile
+        {
+            public string playerId;
+            public string username;     // login name, can't change
+            public string displayName;  // shown at tables and in chat
+            public int avatarId;
+            public string bio;
+            public long createdAt;      // ms since 1970
+            public bool settingsSaved;  // false until settings were saved to the account once
+            public UserSettings settings = new UserSettings();
+        }
+
+        /// <summary>PUT /profile. Null fields are left unchanged.</summary>
+        [Serializable]
+        public class ProfileUpdate
+        {
+            public string displayName;
+            public int? avatarId;
+            public string bio;
         }
 
         [Serializable]
@@ -82,6 +123,7 @@ namespace Poker.Network
             public int seat;
             public string playerId;
             public string name;
+            public int avatarId;
             public int chips;
             public bool isBot;
             public bool connected;

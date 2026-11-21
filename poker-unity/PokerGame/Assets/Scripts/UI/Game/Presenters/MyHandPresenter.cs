@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Poker.Core;
 using Poker.Gameplay;
 using static Poker.Core.Constants;
 using static Poker.Network.DataModel;
@@ -43,6 +44,10 @@ namespace Poker.UI.Game
             // Joined mid-hand (or just restarted with chips): say when they will play.
             bool waitingForNextHand = seated && hand != null && hand.result == null
                 && (hand.yourCards == null || hand.yourCards.Count == 0) && state.seats[state.you.seat]?.chips > 0;
+            // Setting "Show my hand strength" off: no pill, no mark in the chart (for players who want to read it themselves).
+            bool showStrength = SettingsManager.Instance == null || SettingsManager.Instance.Current.showHandStrength;
+            if (!showStrength && rank >= 0) { rank = -1; status = ""; }
+
             string pill = waitingForNextHand ? GameTexts.DealtInNextHand : seated && rank >= 0 ? HandRanks.Names[rank] : null;
             seats.Mine.SetHandRank(pill);
 

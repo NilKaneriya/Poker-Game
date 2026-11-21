@@ -1,4 +1,3 @@
-using Poker.Audio;
 using Poker.Core;
 using TMPro;
 using UnityEngine;
@@ -21,43 +20,43 @@ namespace Poker.UI
         [SerializeField] private CanvasGroup group;
         [SerializeField] private float offAlpha = 0.45f;
 
-        private static AudioManager Audio => AudioManager.Instance;
-        private static SessionClock Clock => SessionClock.Instance;
+        private static SettingsManager Settings => SettingsManager.Instance;
 
         private void Awake() => AppServices.EnsureExists();
 
         private void Start()
         {
             GetComponent<Button>().onClick.AddListener(Toggle);
-            Audio.SettingsChanged += Refresh;
-            Clock.SettingsChanged += Refresh;
-            Refresh();
+            Settings.Changed += Refresh;
+            Refresh(Settings.Current);
         }
 
         private void OnDestroy()
         {
-            if (Audio != null) Audio.SettingsChanged -= Refresh;
-            if (Clock != null) Clock.SettingsChanged -= Refresh;
+            if (Settings != null) Settings.Changed -= Refresh;
         }
 
-        private bool IsOn => setting switch
+        private bool IsOn(Network.DataModel.UserSettings s) => setting switch
         {
-            Setting.Music => Audio.MusicOn,
-            Setting.Sound => Audio.SoundOn,
-            _ => Clock.RemindersOn,
+            Setting.Music => s.musicOn,
+            Setting.Sound => s.soundOn,
+            _ => s.breakReminders,
         };
 
         private void Toggle()
         {
-            switch (setting)
+            Settings.Change(s =>
             {
-                case Setting.Music: Audio.SetMusicOn(!Audio.MusicOn); break;
-                case Setting.Sound: Audio.SetSoundOn(!Audio.SoundOn); break;
-                default: Clock.SetRemindersOn(!Clock.RemindersOn); break;
-            }
+                switch (setting)
+                {
+                    case Setting.Music: s.musicOn = !s.musicOn; break;
+                    case Setting.Sound: s.soundOn = !s.soundOn; break;
+                    default: s.breakReminders = !s.breakReminders; break;
+                }
+            });
         }
 
-        private void Refresh()
+        private void Refresh(Network.DataModel.UserSettings s)
         {
             string format = setting switch
             {
@@ -65,8 +64,9 @@ namespace Poker.UI
                 Setting.Sound => SettingTexts.Sound,
                 _ => SettingTexts.BreakReminders,
             };
-            label.text = string.Format(format, IsOn ? SettingTexts.On : SettingTexts.Off);
-            group.alpha = IsOn ? 1f : offAlpha;
+            bool on = IsOn(s);
+            label.text = string.Format(format, on ? SettingTexts.On : SettingTexts.Off);
+            group.alpha = on ? 1f : offAlpha;
         }
     }
 }
