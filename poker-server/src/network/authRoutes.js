@@ -31,7 +31,7 @@ router.post('/register', rateLimit, async (req, res) => {
   const { username, password, remember } = req.body || {};
   const result = await store.register(username, password);
   if (result.error) return res.status(400).json({ error: result.error });
-  const token = store.issueToken(result.user.id, Boolean(remember));
+  const token = await store.issueToken(result.user.id, Boolean(remember));
   res.json({ token, ...toPublicUser(result.user) });
 });
 
@@ -40,21 +40,22 @@ router.post('/login', rateLimit, async (req, res) => {
   const { username, password, remember } = req.body || {};
   const user = await store.verifyPassword(username, password);
   if (!user) return res.status(401).json({ error: 'Wrong username or password' });
-  const token = store.issueToken(user.id, Boolean(remember));
+  const token = await store.issueToken(user.id, Boolean(remember));
   res.json({ token, ...toPublicUser(user) });
 });
 
 // GET /auth/me  (Authorization: Bearer <token>) - used for auto-login
-router.get('/me', (req, res) => {
-  const user = store.resolveToken(bearerToken(req));
+router.get('/me', async (req, res) => {
+  const user = await store.resolveToken(bearerToken(req));
   if (!user) return res.status(401).json({ error: 'Session expired, please log in' });
   res.json(toPublicUser(user));
 });
 
 // POST /auth/logout  (Authorization: Bearer <token>)
-router.post('/logout', (req, res) => {
-  store.revokeToken(bearerToken(req));
+router.post('/logout', async (req, res) => {
+  await store.revokeToken(bearerToken(req));
   res.json({ ok: true });
 });
 
 module.exports = router;
+module.exports.bearerToken = bearerToken;

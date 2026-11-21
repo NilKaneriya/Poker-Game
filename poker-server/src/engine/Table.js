@@ -19,9 +19,9 @@ class Table {
     this.smallBlind = smallBlind;
     this.bigBlind = bigBlind;
     this.startingChips = startingChips;
-    this.seats = new Array(maxSeats).fill(null); // { playerId, name, chips, isBot, connected, sittingOut }
+    this.seats = new Array(maxSeats).fill(null); // { playerId, name, avatarId, chips, isBot, connected, sittingOut }
     // Humans who joined a bots table during a hand. They watch until it ends, then
-    // take a bot's seat (see TableRunner). { playerId, name, connected }
+    // take a bot's seat (see TableRunner). { playerId, name, avatarId, connected }
     this.waiting = [];
     this.buttonSeat = -1;
     this.hand = null;     // the running hand
@@ -62,8 +62,17 @@ class Table {
   }
 
   /** Join the waiting list (bots tables, mid-hand). */
-  addWaiting({ playerId, name }) {
-    if (!this.hasMember(playerId)) this.waiting.push({ playerId, name, connected: true });
+  addWaiting({ playerId, name, avatarId = 0 }) {
+    if (!this.hasMember(playerId)) this.waiting.push({ playerId, name, avatarId, connected: true });
+  }
+
+  /** A seated or waiting player changed their profile: show the new name and avatar. */
+  updateMember(playerId, { name, avatarId }) {
+    const member = this.getSeat(playerId) || this.waiting.find((w) => w.playerId === playerId);
+    if (!member) return false;
+    member.name = name;
+    member.avatarId = avatarId;
+    return true;
   }
 
   /** Mark a seated or waiting player online/offline. */
@@ -77,12 +86,12 @@ class Table {
   }
 
   /** Seat a player in the first free seat. Returns the seat index, or -1 if full. */
-  addPlayer({ playerId, name, isBot = false }) {
+  addPlayer({ playerId, name, avatarId = 0, isBot = false }) {
     const existing = this.findSeat(playerId);
     if (existing !== -1) return existing;
     const seat = this.seats.indexOf(null);
     if (seat === -1) return -1;
-    this.seats[seat] = { playerId, name, chips: this.startingChips, isBot, connected: true, sittingOut: false };
+    this.seats[seat] = { playerId, name, avatarId, chips: this.startingChips, isBot, connected: true, sittingOut: false };
     return seat;
   }
 
@@ -190,7 +199,9 @@ class Table {
       buttonSeat: this.buttonSeat,
       handNumber: this.handNumber,
       seats: this.seats.map((s, i) =>
-        s ? { seat: i, playerId: s.playerId, name: s.name, chips: s.chips, isBot: s.isBot, connected: s.connected } : null
+        s
+          ? { seat: i, playerId: s.playerId, name: s.name, avatarId: s.avatarId, chips: s.chips, isBot: s.isBot, connected: s.connected }
+          : null
       ),
     };
   }

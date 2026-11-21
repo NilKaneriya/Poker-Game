@@ -5,36 +5,69 @@ const { Server } = require('socket.io');
 
 const config = require('./config');
 const log = require('./utils/logger');
+const { createStorage } = require('./storage');
+const { store: accounts } = require('./services/AccountStore');
+const { profiles } = require('./services/ProfileService');
+const stats = require('./services/StatsService');
 const tables = require('./services/TableManager');
 const authRoutes = require('./network/authRoutes');
+const { createProfileRoutes } = require('./network/profileRoutes');
+const { syncProfile } = require('./network/profileSync');
 const registerSocketServer = require('./network/socketServer');
 const { serveWebGL } = require('./network/webglHosting');
 const { tableRoom } = require('./network/broadcast');
 const gameEvents = require('./network/gameEvents');
 const { attachChat } = require('./chat');
 
-const app = express();
-app.use(cors({ origin: config.corsOrigin }));
-app.use(express.json({ limit: '10kb' }));
+async function main() {
+  // 1. Storage first: nothing can log in or save stats without it.
+  const storage = await createStorage(config.storage);
+  accounts.attach(storage);
+  profiles.attach(storage);
+  stats.attach(storage);
+  log.info(`Player data: ${storage.kind === 'mongodb' ? `MongoDB (database "${config.storage.mongoDb}")` : `JSON files in ${config.storage.dataDir}`}`);
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
-app.get('/tables', (req, res) => res.json(tables.list()));
-app.use('/auth', authRoutes);
-const servingGame = serveWebGL(app, config.webglDir);
+  // 2. HTTP: health, tables, login, profile, and the WebGL game.
+  const app = express();
+  app.use(cors({ origin: config.corsOrigin }));
+  app.use(express.json({ limit: '10kb' }));
 
-const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: config.corsOrigin } });
+  const server = http.createServer(app);
+  const io = new Server(server, { cors: { origin: config.corsOrigin } });
 
-registerSocketServer(io);
+  app.get('/health', (req, res) => res.json({ status: 'ok' }));
+  app.get('/tables', (req, res) => res.json(tables.list()));
+  app.use('/auth', authRoutes);
+  app.use('/profile', createProfileRoutes({ onProfileChanged: (profile) => syncProfile(io, profile) }));
+  const servingGame = serveWebGL(app, config.webglDir);
 
-// Chat is a separate module: it only gets what it needs from the game, passed in here.
-attachChat(io, {
-  tableOf: (playerId) => tables.findByPlayer(playerId)?.code ?? null,
-  roomOf: tableRoom,
-  gameEvents,
-});
+  // 3. Real-time game.
+  registerSocketServer(io);
 
-server.listen(config.port, () => {
-  log.info(`Poker server listening on http://localhost:${config.port}`);
-  if (servingGame) log.info(`Serving the WebGL game from ${config.webglDir} at http://localhost:${config.port}/`);
+  // Chat is a separate module: it only gets what it needs from the game, passed in here.
+  attachChat(io, {
+    tableOf: (playerId) => tables.findByPlayer(playerId)?.code ?? null,
+    roomOf: tableRoom,
+    gameEvents,
+  });
+
+  server.listen(config.port, () => {
+    log.info(`Poker server listening on http://localhost:${config.port}`);
+    if (servingGame) log.info(`Serving the WebGL game from ${config.webglDir} at http://localhost:${config.port}/`);
+  });
+
+  // Close the database cleanly on Ctrl+C / platform shutdown.
+  const shutdown = async () => {
+    server.close();
+    await storage.close();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+main().catch((err) => {
+  log.error(`Server failed to start: ${err.message}`);
+  if (config.storage.mongoUri) log.error('Check MONGODB_URI (and that this machine is allowed to reach the database).');
+  process.exit(1);
 });

@@ -35,15 +35,20 @@ module.exports = {
     rateWindowMs: 10000, //   ...in this window, per player
   },
 
-  // Player statistics (hands played/won, biggest pot, best hand)
-  statsFile: process.env.STATS_FILE || path.join(__dirname, '..', 'data', 'stats.json'),
+  // Where accounts, profiles, settings, login tokens and stats are saved.
+  //   MONGODB_URI set -> MongoDB (e.g. a free MongoDB Atlas cluster)
+  //   not set         -> JSON files in DATA_DIR (nothing to install)
+  storage: {
+    mongoUri: process.env.MONGODB_URI || '',
+    mongoDb: process.env.MONGODB_DB || 'poker',
+    dataDir: process.env.DATA_DIR || path.join(__dirname, '..', 'data'),
+  },
 
   // Optional: folder with a Unity WebGL build to serve from this server (same address
   // for game and server, so a single deployment is enough). Empty = don't serve.
   webglDir: process.env.WEBGL_DIR || path.join(__dirname, '..', 'public'),
 
   auth: {
-    accountsFile: process.env.ACCOUNTS_FILE || path.join(__dirname, '..', 'data', 'accounts.json'),
     sessionTokenTtlMs: 12 * 60 * 60 * 1000, // without "remember me"
     rememberTokenTtlMs: 30 * DAY_MS, //        with "remember me"
   },

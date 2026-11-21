@@ -9,7 +9,7 @@ const { cleanChatText } = require('./chatText');
  * @param {object} deps  { io, store, limiter, settings, tableOf, roomOf }
  */
 function registerChatHandlers(socket, { io, store, limiter, settings, tableOf, roomOf }) {
-  const { playerId, name } = socket.data;
+  const { playerId } = socket.data;
   const fail = (message) => socket.emit(CHAT_EVENTS.ERROR, { message });
 
   socket.on(CHAT_EVENTS.SEND, (payload) => {
@@ -20,6 +20,8 @@ function registerChatHandlers(socket, { io, store, limiter, settings, tableOf, r
     if (!text) return; // nothing left after cleaning: nothing to send
     if (!limiter.tryHit(playerId)) return fail('Slow down - wait a few seconds before sending more messages');
 
+    // Read the name now, not at connect time: the player may have changed it since.
+    const name = socket.data.name;
     io.to(roomOf(code)).emit(CHAT_EVENTS.MESSAGE, store.addPlayerMessage(code, { playerId, name }, text));
   });
 

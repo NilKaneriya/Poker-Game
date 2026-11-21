@@ -1,5 +1,6 @@
 const EVENTS = require('./events');
-const { store } = require('../services/AccountStore');
+const { store, nameOf } = require('../services/AccountStore');
+const { defaultAvatarFor } = require('../services/profileRules');
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
 const { playerRoom, tableRoom, sendStats } = require('./broadcast');
@@ -10,12 +11,18 @@ const registerGameHandlers = require('./handlers/gameHandlers');
 
 module.exports = (io) => {
   // Every socket must present a valid login token (from /auth/login) in the handshake.
-  io.use((socket, next) => {
-    const user = store.resolveToken(socket.handshake.auth?.token);
-    if (!user) return next(new Error('unauthorized'));
-    socket.data.playerId = user.id;
-    socket.data.name = user.username;
-    next();
+  io.use(async (socket, next) => {
+    try {
+      const user = await store.resolveToken(socket.handshake.auth?.token);
+      if (!user) return next(new Error('unauthorized'));
+      socket.data.playerId = user.id;
+      socket.data.name = nameOf(user); // display name; kept up to date by profileSync
+      socket.data.avatarId = user.avatarId ?? defaultAvatarFor(user.id);
+      next();
+    } catch (err) {
+      log.error(`Login check failed: ${err.message}`);
+      next(new Error('server error'));
+    }
   });
 
   io.on('connection', (socket) => {

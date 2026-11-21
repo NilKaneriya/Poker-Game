@@ -9,6 +9,7 @@ const { buildPlayerView } = require('./playerView');
 const { BotPlayer, LEVELS } = require('../bots/BotPlayer');
 
 const { TABLE_MODES } = require('../engine/constants');
+const { AVATAR_COUNT } = require('../services/profileRules');
 
 const BOT_NAMES = ['Ava', 'Max', 'Zoe', 'Rex', 'Mia', 'Kai'];
 
@@ -119,8 +120,10 @@ class TableRunner {
   /** Update the stats of every human dealt into the hand that just ended and send them theirs. */
   recordStats(result) {
     const humans = this.table.lastHand.players.map((p) => p.playerId).filter((id) => !this.bots.has(id));
-    stats.recordHand(humans, result);
-    for (const playerId of humans) sendStats(this.io, playerId);
+    // Saving must never hold up the table, so it runs in the background.
+    stats.recordHand(humans, result)
+      .then(() => humans.forEach((playerId) => sendStats(this.io, playerId)))
+      .catch((err) => log.error(`Table ${this.table.code}: could not save stats: ${err.message}`));
   }
 
   /** A human's action from the socket. Returns the engine's { ok, error }. */
@@ -205,8 +208,8 @@ class TableRunner {
     const table = this.table;
     while (table.waiting.length > 0) {
       if (table.isFull && !this.removeBot()) break; // only humans left; they keep waiting
-      const { playerId, name, connected } = table.waiting.shift();
-      const seat = table.addPlayer({ playerId, name });
+      const { playerId, name, avatarId, connected } = table.waiting.shift();
+      const seat = table.addPlayer({ playerId, name, avatarId });
       table.getSeat(playerId).connected = connected;
       log.info(`Table ${table.code}: ${name} took seat ${seat} after waiting for the hand to end`);
       gameEvents.emit(GAME_EVENTS.PLAYER_SEATED, { code: table.code, playerId, name });
@@ -233,7 +236,8 @@ class TableRunner {
     const level = LEVELS[(offset + index) % LEVELS.length];
     const name = `${BOT_NAMES[(offset + index) % BOT_NAMES.length]} (${level})`;
     const bot = new BotPlayer({ playerId: `bot-${this.table.code}-${Date.now()}-${index}`, name, level });
-    if (this.table.addPlayer({ playerId: bot.playerId, name, isBot: true }) === -1) return false;
+    const avatarId = (offset + index) % AVATAR_COUNT;
+    if (this.table.addPlayer({ playerId: bot.playerId, name, avatarId, isBot: true }) === -1) return false;
     this.bots.set(bot.playerId, bot);
     log.info(`Table ${this.table.code}: bot ${name} sat down`);
     return true;

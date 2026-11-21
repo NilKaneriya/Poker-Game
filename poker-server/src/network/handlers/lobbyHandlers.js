@@ -25,16 +25,19 @@ function cleanSeatCount(value) {
 }
 
 module.exports = (io, socket) => {
-  const { playerId, name } = socket.data; // set from the login token, not from client input
+  const { playerId } = socket.data; // set from the login token, not from client input
+  // Name and avatar can change while connected (profile edits), so they are read when used.
+  const me = () => ({ playerId, name: socket.data.name, avatarId: socket.data.avatarId });
   const fail = (message) => socket.emit(EVENTS.ERROR, { message });
 
   function leaveCurrentTable() {
-    const table = removeFromTable(io, playerId, name); // folds them if a hand is running
+    const table = removeFromTable(io, playerId, socket.data.name); // folds them if a hand is running
     if (table) socket.leave(tableRoom(table.code));
   }
 
   function seat(table) {
-    const seatIndex = table.addPlayer({ playerId, name });
+    const { name } = me();
+    const seatIndex = table.addPlayer(me());
     if (seatIndex === -1) return fail('Table is full');
     socket.join(tableRoom(table.code));
     log.info(`${name} sat at ${table.code} seat ${seatIndex}`);
@@ -55,7 +58,7 @@ module.exports = (io, socket) => {
       maxSeats: cleanSeatCount(maxSeats),
       hostId: playerId,
     });
-    log.info(`${name} created ${table.mode} table ${table.code} (${table.maxSeats} seats)`);
+    log.info(`${socket.data.name} created ${table.mode} table ${table.code} (${table.maxSeats} seats)`);
     seat(table);
   });
 
@@ -89,7 +92,8 @@ module.exports = (io, socket) => {
     if (table.humanCount >= table.maxSeats) return fail('Table is full');
 
     leaveCurrentTable();
-    table.addWaiting({ playerId, name });
+    const { name } = me();
+    table.addWaiting(me());
     socket.join(tableRoom(table.code));
     log.info(`${name} joined bots table ${table.code}; seated when the current hand ends`);
     gameEvents.emit(GAME_EVENTS.PLAYER_WAITING, { code: table.code, playerId, name });
