@@ -8,7 +8,7 @@ const URL = process.env.SERVER_URL || 'http://localhost:3000';
 const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
 const check = (cond, msg) => { if (!cond) fail(msg); };
 const GRACE_MS = Number(process.env.TEST_GRACE_MS || 0); // set by test:e2e (matches the server's RECONNECT_GRACE_MS)
-setTimeout(() => fail('timed out'), 45000);
+setTimeout(() => fail('timed out'), 90000);
 
 const once = (socket, event) => new Promise((resolve) => socket.once(event, resolve));
 
@@ -17,6 +17,16 @@ async function post(path, body, token) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
     body: JSON.stringify(body || {}),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
+/** Any HTTP method with a JSON body and an optional login token. */
+async function request(method, path, body, token) {
+  const res = await fetch(URL + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token && { Authorization: `Bearer ${token}` }) },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
   });
   return { status: res.status, body: await res.json() };
 }
@@ -160,6 +170,50 @@ async function chatChecks(alice, bob) {
 }
 
 /**
+ * Profile and settings (saved in MongoDB or JSON files): read, edit, validation, login
+ * required, and a new name/avatar shows at the table and in chat right away.
+ */
+async function profileChecks(alice, bob, bobToken) {
+  check((await request('GET', '/profile/me')).status === 401, 'profile readable without a login');
+
+  const mine = await request('GET', '/profile/me', undefined, bobToken);
+  check(mine.status === 200 && mine.body.settings && mine.body.hash === undefined, 'profile/me wrong or leaks the hash');
+  check(mine.body.settings.chatEnabled === true, 'settings defaults missing');
+
+  const bad = await request('PUT', '/profile', { displayName: 'x' }, bobToken);
+  check(bad.status === 400 && /display name/i.test(bad.body.error), 'invalid display name accepted');
+
+  alice.emit('createTable', { tableName: 'Profiles', mode: 'friends', maxSeats: 3 });
+  const room = await stateWhere(alice, (s) => s.name === 'Profiles');
+  bob.emit('joinTable', { code: room.code });
+  await stateWhere(bob, (s) => s.code === room.code && s.seats.filter(Boolean).length === 2);
+
+  // Rename while seated: Alice sees the new name and avatar on Bob's seat at once.
+  const renamed = stateWhere(alice, (s) => s.seats.some((x) => x && x.name === 'Ace Bob' && x.avatarId === 5));
+  const edit = await request('PUT', '/profile', { displayName: ' Ace   Bob ', avatarId: 5, bio: 'Hi!' }, bobToken);
+  check(edit.status === 200 && edit.body.displayName === 'Ace Bob', 'profile edit failed');
+  await renamed;
+
+  // ...and chat uses the new name.
+  const said = new Promise((resolve) => {
+    const h = (m) => { if (m.kind === 'player') { alice.off('chatMessage', h); resolve(m); } };
+    alice.on('chatMessage', h);
+  });
+  bob.emit('chatSend', { text: 'new name' });
+  check((await said).name === 'Ace Bob', 'chat still shows the old name');
+
+  const settings = await request('PUT', '/profile/settings', { musicVolume: 0.3, fourColorDeck: true }, bobToken);
+  check(settings.status === 200 && settings.body.musicVolume === 0.3 && settings.body.fourColorDeck, 'settings not saved');
+  check((await request('PUT', '/profile/settings', { chatEnabled: 'no' }, bobToken)).status === 400, 'bad setting accepted');
+  const reread = await request('GET', '/profile/me', undefined, bobToken);
+  check(reread.body.settings.fourColorDeck === true && reread.body.bio === 'Hi!', 'profile or settings not stored');
+
+  alice.emit('leaveTable');
+  bob.emit('leaveTable');
+  console.log('Profile: edit, validation, settings saved, live name/avatar at the table and in chat');
+}
+
+/**
  * Statistics (the retention feature): sent on connect, and updated after every hand the
  * player was dealt into. Plays one quick hand against a bot, checking or calling.
  */
@@ -269,6 +323,7 @@ async function graceChecks(alice, bob, bobToken) {
   await waitingRoomChecks(alice, bob2);
   await statsChecks(alice);
   await chatChecks(alice, bob2);
+  await profileChecks(alice, bob2, bobLogin.body.token);
   if (GRACE_MS) await graceChecks(alice, bob2, bobLogin.body.token);
   else console.log('(skipping reconnect-grace check: run `npm run test:e2e` for the full suite)');
 
