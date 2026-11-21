@@ -67,9 +67,9 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test            # 57 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats
+npm test            # 63 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, waiting list
 npm run test:e2e    # starts a throwaway server and plays through the network: login, join by code,
-                    # reconnect, waiting room, host start, bots tables, stats, seat freed after disconnect
+                    # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat), stats, seat freed after disconnect
 npm run play:bots   # watch real hands against bots in the console (against a running server)
 ```
 
@@ -115,6 +115,10 @@ Wi-Fi, or the hosted build above) and point `Server Url` at it, e.g.
 
 Playing alone: **Play vs bots** fills the table with bots (easy, normal, hard).
 
+Joining a bots game: a friend can enter the code of your *Play vs bots* table. If a
+hand is running they watch it (no cards, no turns). When it ends, the bot with the
+fewest chips stands up and the friend takes its seat for the next hand.
+
 ---
 
 ## 3. Main design decisions
@@ -146,7 +150,9 @@ token (30 days); logging out revokes it.
 **Tables: two modes.** *Play with friends* tables wait in a waiting room until every
 seat is filled (or the host starts), so everyone starts together. *Play vs bots*
 tables fill empty seats with bots. Bots are kept out of friends tables on purpose,
-so friends play each other.
+so friends play each other. A bots table is not in the public list, but a friend
+with the code can join: they wait for the hand in progress to end (no one is
+dealt in or removed mid-hand), then replace the bot with the fewest chips.
 
 **Chips belong to a table.** Every player sits down with 1,000 chips. Busting out
 makes you a spectator with a free restart; nothing is ever sold.

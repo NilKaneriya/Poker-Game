@@ -47,7 +47,7 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 3. **Lobby**: the player picks **Play vs bots / Play with friends** and **2-6 players**, then `createTable`. Or joins with a code / invite link / the open-tables list.
 4. **Server seats the player** and sends `tableState` → the client switches to the Game scene.
 5. **Friends table**: `started = false` → the **waiting room** shows the room code and share buttons. Every join sends a new snapshot to everyone. When the **last seat is taken**, the server sets `started = true` and deals → everyone's waiting room closes at the same moment. The host may press **Start now** with 2+ players.
-   **Bots table**: empty seats are filled with bots → starts at once.
+   **Bots table**: empty seats are filled with bots → starts at once. A friend who joins by code mid-hand goes on the table's **waiting list** (`you.waiting = true`, no seat, no cards) and watches. When the hand ends, `TableRunner.seatWaitingPlayers()` stands up the bot with the fewest chips and seats the friend before the next deal.
 6. **A hand**: server posts blinds, deals, and runs a **30-second turn timer**. On your turn the snapshot contains your **legal actions**, so the action bar can only offer legal moves. You click → `playerAction` → the server validates it in the rules engine → new snapshots for everyone.
 7. **Bots** act through the **same rule checks** as humans and only see what a human in their seat would see.
 8. **End of hand**: showdown or everyone else folds → result (winners, hand names, best cards) → win/lose screen → the next hand starts after a short pause.
@@ -83,9 +83,9 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 | File | Responsibility |
 |---|---|
 | `socketServer.js` | Rejects sockets without a valid token; sends `session` (with the table you are at, or none after a restart) and your stats; puts reconnecting players back at their table; starts the grace period on disconnect. |
-| `handlers/lobbyHandlers.js` | `createTable` (validates mode and seat count 2-6), `joinTable` (bots tables are private), `leaveTable`, `listTables`, `startGame` (host only). |
+| `handlers/lobbyHandlers.js` | `createTable` (validates mode and seat count 2-6), `joinTable` (bots tables: joins the waiting list, seated after the current hand), `leaveTable`, `listTables`, `startGame` (host only). |
 | `handlers/gameHandlers.js` | `playerAction` (validated by the engine), `rebuy`. |
-| `TableRunner.js` | Runs a table over time: **waiting room** (starts when full or when the host starts), turn timer, bot moves, result pause, next hand. Fills bots tables with bots. |
+| `TableRunner.js` | Runs a table over time: **waiting room** (starts when full or when the host starts), turn timer, bot moves, result pause, next hand. Fills bots tables with bots; between hands swaps a bot out for each waiting human. |
 | `playerView.js` | Builds what one specific player may see. The single gate for hidden information. |
 | `broadcast.js` | Sends every seated human their own view; sends the table list. |
 | `TurnTimer.js` | One countdown per table; exposes time left so clients draw their own ring. |
@@ -108,7 +108,7 @@ Three personalities (easy / normal / hard). Each one compares **hand strength** 
 ### Tests and scripts
 - `npm test`: **54 unit tests** for cards, evaluator, pots, hands, table and bots.
 - `npm test`: also covers **player stats**.
-- `npm run test:e2e`: starts its own server and runs the end-to-end test: auth, join, reconnect, waiting room, host-only start, auto start when full, private bots tables, seat-count validation, **stats after a real hand, seat freed after the grace period, session reporting a closed table**.
+- `npm run test:e2e`: starts its own server and runs the end-to-end test: auth, join, reconnect, waiting room, host-only start, auto start when full, joining a bots table mid-hand and taking a bot's seat after it, seat-count validation, **stats after a real hand, seat freed after the grace period, session reporting a closed table**.
 - `npm run play:bots`: plays real hands against bots and checks no hidden cards leak.
 
 ---
@@ -198,6 +198,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `HandRankingsPanel` | Hint chart: 10 hands with example cards, rules, and a mark on **your current hand**. |
 | **Presenters/** `HandResultPresenter` | Decides which result screen to show (once per hand) and highlights the winning cards. |
 | `MyHandPresenter` | Works out **your** current hand from your 2 cards + the board and shows it under your chips and in the chart. |
+| `SeatWaitPresenter` | Joined a bots game mid-hand: tells the player they will sit when the hand ends, then that a bot gave up its seat. |
 | `TableInviteActions` | Copy code, copy link, share invite (with toasts). |
 | **Animation/** `TableChangeAnimator` | Compares the **previous and new snapshot** and decides what to animate: new bets, bets into the pot, street banner, pot to the winner. |
 | `ChipAnimator` | *How* chips fly: pooled chip images with a jump arc (no allocations per hand). |
@@ -221,7 +222,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 
 ## 7. Features and how they work
 
-**Play vs bots / Play with friends, 2-6 seats.** The lobby sends `createTable { mode, maxSeats }`. The server validates both (bad values fall back to defaults). Bots tables are filled with bots and hidden from the list.
+**Play vs bots / Play with friends, 2-6 seats.** The lobby sends `createTable { mode, maxSeats }`. The server validates both (bad values fall back to defaults). Bots tables are filled with bots and hidden from the list, but joinable by code: the joiner waits for the current hand to end, then a bot gives up its seat (`Table.waiting`, `TableRunner.seatWaitingPlayers`).
 
 **Waiting room.** `Table.started` is `false` for friends tables. `TableRunner` doesn't deal until the table is full (or the host sends `startGame`). Every snapshot carries `started` and `hostId`, so every client shows or hides the waiting room on its own, at the same time.
 
@@ -242,7 +243,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
 
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, private bots tables, **player statistics**, **reconnect grace period**, **WebGL hosting**. **57 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
+- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**. **63 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
 - Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
 **Before submitting**
