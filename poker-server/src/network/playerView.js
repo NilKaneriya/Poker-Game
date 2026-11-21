@@ -9,7 +9,8 @@
  */
 function buildPlayerView(table, playerId, timing = {}) {
   const view = table.toPublic();
-  view.you = { playerId, seat: table.findSeat(playerId) };
+  // waiting: joined a bots table mid-hand; gets a seat when this hand ends
+  view.you = { playerId, seat: table.findSeat(playerId), waiting: table.isWaiting(playerId) };
   view.hand = table.hand ? buildHandView(table, playerId, timing) : null;
   return view;
 }

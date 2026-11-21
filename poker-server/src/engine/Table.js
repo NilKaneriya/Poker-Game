@@ -20,6 +20,9 @@ class Table {
     this.bigBlind = bigBlind;
     this.startingChips = startingChips;
     this.seats = new Array(maxSeats).fill(null); // { playerId, name, chips, isBot, connected, sittingOut }
+    // Humans who joined a bots table during a hand. They watch until it ends, then
+    // take a bot's seat (see TableRunner). { playerId, name, connected }
+    this.waiting = [];
     this.buttonSeat = -1;
     this.hand = null;     // the running hand
     this.lastHand = null; // the previous hand, kept for showing its result
@@ -44,6 +47,35 @@ class Table {
     return this.seats[this.findSeat(playerId)] || null;
   }
 
+  /** Seated humans plus humans waiting for a seat. */
+  get humanCount() {
+    return this.players.filter((p) => !p.isBot).length + this.waiting.length;
+  }
+
+  isWaiting(playerId) {
+    return this.waiting.some((w) => w.playerId === playerId);
+  }
+
+  /** At this table at all: seated or waiting for a seat. */
+  hasMember(playerId) {
+    return this.findSeat(playerId) !== -1 || this.isWaiting(playerId);
+  }
+
+  /** Join the waiting list (bots tables, mid-hand). */
+  addWaiting({ playerId, name }) {
+    if (!this.hasMember(playerId)) this.waiting.push({ playerId, name, connected: true });
+  }
+
+  /** Mark a seated or waiting player online/offline. */
+  setConnected(playerId, connected) {
+    const member = this.getSeat(playerId) || this.waiting.find((w) => w.playerId === playerId);
+    if (member) member.connected = connected;
+  }
+
+  isConnected(playerId) {
+    return Boolean((this.getSeat(playerId) || this.waiting.find((w) => w.playerId === playerId))?.connected);
+  }
+
   /** Seat a player in the first free seat. Returns the seat index, or -1 if full. */
   addPlayer({ playerId, name, isBot = false }) {
     const existing = this.findSeat(playerId);
@@ -56,6 +88,7 @@ class Table {
 
   /** Leave the table. If a hand is running they fold; chips already bet stay in the pot. */
   removePlayer(playerId) {
+    this.waiting = this.waiting.filter((w) => w.playerId !== playerId);
     const seat = this.findSeat(playerId);
     if (seat === -1) return;
     if (this.hand && !this.hand.isComplete) {

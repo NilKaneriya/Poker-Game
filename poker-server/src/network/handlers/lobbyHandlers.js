@@ -66,12 +66,31 @@ module.exports = (io, socket) => {
       socket.join(tableRoom(table.code));
       return runnerFor(io, table).update();
     }
-    if (table.mode === TABLE_MODES.BOTS) return fail('That table is a private game against bots');
+    if (table.mode === TABLE_MODES.BOTS) return joinBotsTable(table);
     if (table.isFull) return fail('Table is full');
 
     leaveCurrentTable();
     seat(table);
   });
+
+  /**
+   * A friend joins a game against bots by code. Mid-hand they watch from the waiting
+   * list; when the hand ends a bot stands up and they take its seat. Between hands
+   * the swap happens straight away (the runner does it on update).
+   */
+  function joinBotsTable(table) {
+    if (table.isWaiting(playerId)) {
+      socket.join(tableRoom(table.code));
+      return runnerFor(io, table).update();
+    }
+    if (table.humanCount >= table.maxSeats) return fail('Table is full');
+
+    leaveCurrentTable();
+    table.addWaiting({ playerId, name });
+    socket.join(tableRoom(table.code));
+    log.info(`${name} joined bots table ${table.code}; seated when the current hand ends`);
+    runnerFor(io, table).update();
+  }
 
   socket.on(EVENTS.START_GAME, () => {
     const table = tables.findByPlayer(playerId);

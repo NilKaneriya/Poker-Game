@@ -30,7 +30,7 @@ module.exports = (io) => {
     socket.emit(EVENTS.SESSION, { playerId, username: name, tableCode: table?.code ?? null });
     sendStats(io, playerId);
     if (table) {
-      table.getSeat(playerId).connected = true;
+      table.setConnected(playerId, true);
       socket.join(tableRoom(table.code));
       runnerFor(io, table).update();
       log.info(`${name} rejoined table ${table.code}`);
@@ -46,7 +46,7 @@ module.exports = (io) => {
       const stillConnected = (await io.in(playerRoom(playerId)).fetchSockets()).length > 0;
       const current = tables.findByPlayer(playerId);
       if (current && !stillConnected) {
-        current.getSeat(playerId).connected = false;
+        current.setConnected(playerId, false);
         runnerFor(io, current).update();
         startGrace(io, playerId, name);
       }

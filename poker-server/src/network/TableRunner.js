@@ -28,6 +28,7 @@ class TableRunner {
     this.pending = null;      // the scheduled "start hand" or "finish hand"
     this.botTimer = null;
     this.bots = new Map();    // playerId -> BotPlayer
+    this.botsAdded = 0;
   }
 
   // ---------- Main loop ----------
@@ -160,9 +161,15 @@ class TableRunner {
 
   // ---------- Bots ----------
 
-  /** Bots tables: every empty seat gets a bot. Friends tables never have bots. */
+  /**
+   * Bots tables: humans waiting for a seat sit down first (a bot stands up for each),
+   * then every empty seat gets a bot. Friends tables never have bots.
+   * Only runs between hands, so nobody is removed from a hand in progress.
+   */
   manageBots() {
     if (this.table.mode !== TABLE_MODES.BOTS) return;
+
+    this.seatWaitingPlayers();
 
     const humans = this.table.players.filter((p) => !p.isBot);
     if (humans.length > 0) {
@@ -176,8 +183,32 @@ class TableRunner {
     }
   }
 
+  /** Give each waiting human a seat, freeing a bot's seat when the table is full. */
+  seatWaitingPlayers() {
+    const table = this.table;
+    while (table.waiting.length > 0) {
+      if (table.isFull && !this.removeBot()) break; // only humans left; they keep waiting
+      const { playerId, name, connected } = table.waiting.shift();
+      const seat = table.addPlayer({ playerId, name });
+      table.getSeat(playerId).connected = connected;
+      log.info(`Table ${table.code}: ${name} took seat ${seat} after waiting for the hand to end`);
+    }
+  }
+
+  /** Stand up one bot (the one with the fewest chips, so the least play is disturbed). */
+  removeBot() {
+    const bot = this.table.players
+      .filter((p) => p.isBot)
+      .sort((a, b) => a.chips - b.chips)[0];
+    if (!bot) return false;
+    this.table.removePlayer(bot.playerId);
+    this.bots.delete(bot.playerId);
+    log.info(`Table ${this.table.code}: bot ${bot.name} left to make room for a player`);
+    return true;
+  }
+
   addBot() {
-    const index = this.bots.size;
+    const index = this.botsAdded++; // count every bot ever added, so ids are never reused
     // Vary names and levels per table, so different personalities show up.
     const offset = this.table.code.charCodeAt(0) + this.table.handNumber;
     const level = LEVELS[(offset + index) % LEVELS.length];

@@ -73,18 +73,31 @@ async function waitingRoomChecks(alice, bob) {
   await stateWhere(alice, (s) => s.code === duel.code && s.hand);
   console.log(`Table ${duel.code} started by itself when the last seat was taken`);
 
-  // Bots table for 4: Alice + 3 bots, starts right away, private.
+  // Bots table for 4: Alice + 3 bots, starts right away, not listed in the lobby.
   alice.emit('createTable', { tableName: 'Bots', mode: 'bots', maxSeats: 4 });
   const bots = await stateWhere(alice, (s) => s.name === 'Bots');
   const seated = bots.seats.filter(Boolean);
   check(seated.length === 4 && seated.filter((s) => s.isBot).length === 3, 'bots table not filled with 3 bots');
   check(bots.started, 'bots table should start at once');
-  bob.emit('joinTable', { code: bots.code });
-  const privateErr = await errorFrom(bob);
-  check(/bots/i.test(privateErr.message), 'joined a private bots table');
   const list = await new Promise((resolve) => { bob.once('tableList', resolve); bob.emit('listTables'); });
   check(!list.some((t) => t.code === bots.code), 'bots table shows in the open list');
-  console.log(`Bots table ${bots.code}: 1 human + 3 bots, private`);
+
+  // Bob joins it by code during a hand: he watches until the hand ends, then a bot
+  // stands up and Bob takes its seat.
+  await stateWhere(alice, (s) => s.code === bots.code && s.hand && !s.hand.result);
+  bob.emit('joinTable', { code: bots.code });
+  const watching = await stateWhere(bob, (s) => s.code === bots.code);
+  if (watching.you.seat === -1) {
+    check(watching.you.waiting, 'mid-hand joiner not marked as waiting');
+    check(watching.hand && watching.hand.yourCards.length === 0, 'waiting player was dealt cards');
+    console.log('Bob joined mid-hand and is watching from the waiting list');
+  }
+  const swapped = await stateWhere(bob, (s) => s.code === bots.code && s.you.seat >= 0);
+  const after = swapped.seats.filter(Boolean);
+  check(!swapped.you.waiting, 'seated player still marked as waiting');
+  check(after.length === 4 && after.filter((s) => s.isBot).length === 2, 'a bot did not give up its seat');
+  check(!swapped.hand || swapped.hand.stage === 'preflop', 'joiner was seated in the middle of a hand');
+  console.log(`Bots table ${bots.code}: Bob took a bot's seat after the hand (2 humans + 2 bots)`);
 
   // Bad sizes fall back to the 6-seat default.
   bob.emit('createTable', { mode: 'friends', maxSeats: 9 });

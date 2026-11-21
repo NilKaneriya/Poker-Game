@@ -38,12 +38,15 @@ class TableManager {
 
   findByPlayer(playerId) {
     for (const table of this.tables.values()) {
-      if (table.findSeat(playerId) !== -1) return table;
+      if (table.hasMember(playerId)) return table; // seated, or waiting for a seat
     }
     return null;
   }
 
-  /** Tables others can join. Games against bots are private, so they are not listed. */
+  /**
+   * Tables shown in the lobby list. Games against bots are not listed, but a friend
+   * with the code can still join one (they take a bot's seat after the current hand).
+   */
   list() {
     return [...this.tables.values()]
       .filter((t) => t.mode === TABLE_MODES.FRIENDS)

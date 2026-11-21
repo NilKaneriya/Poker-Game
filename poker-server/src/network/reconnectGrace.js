@@ -15,7 +15,7 @@ function startGrace(io, playerId, name) {
   timers.set(playerId, setTimeout(() => {
     timers.delete(playerId);
     const table = tables.findByPlayer(playerId);
-    if (!table || table.getSeat(playerId)?.connected) return; // already back
+    if (!table || table.isConnected(playerId)) return; // already back
     log.info(`${name} did not reconnect within ${config.reconnectGraceMs / 1000}s; freeing their seat`);
     removeFromTable(io, playerId, name);
   }, config.reconnectGraceMs));

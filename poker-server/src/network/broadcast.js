@@ -6,10 +6,11 @@ const { buildPlayerView } = require('./playerView');
 const playerRoom = (playerId) => `player:${playerId}`;
 const tableRoom = (code) => `table:${code}`;
 
-/** Send every seated human their own view of the table. */
+/** Send every seated human, and everyone waiting for a seat, their own view of the table. */
 function sendTableState(io, table, timing) {
-  for (const p of table.players) {
-    if (!p.isBot) io.to(playerRoom(p.playerId)).emit(EVENTS.TABLE_STATE, buildPlayerView(table, p.playerId, timing));
+  const viewers = [...table.players.filter((p) => !p.isBot), ...table.waiting];
+  for (const p of viewers) {
+    io.to(playerRoom(p.playerId)).emit(EVENTS.TABLE_STATE, buildPlayerView(table, p.playerId, timing));
   }
 }
 

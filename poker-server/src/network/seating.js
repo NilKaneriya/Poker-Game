@@ -16,7 +16,7 @@ function removeFromTable(io, playerId, name) {
   table.removePlayer(playerId);
   log.info(`${name} left table ${table.code}`);
 
-  if (table.players.every((p) => p.isBot)) {
+  if (table.humanCount === 0) { // only bots left (nobody seated or waiting)
     removeRunner(table.code);
     tables.remove(table.code);
     log.info(`Table ${table.code} closed`);
