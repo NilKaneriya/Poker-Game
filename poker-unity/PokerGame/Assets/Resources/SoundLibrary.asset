@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c61e22b8ddf0cc408d4daba5f2086e0, type: 3}
+  m_Name: SoundLibrary
+  m_EditorClassIdentifier: 
+  entries:
+  - id: 0
+    clips:
+    - {fileID: 8300000, guid: 1e5bcc74b16f1cf4995333ab11387085, type: 3}
+    volume: 0.35
+    pitchJitter: 0
+  - id: 1
+    clips:
+    - {fileID: 8300000, guid: f2c78fbc99f0d1641923708bd8c88ad2, type: 3}
+    volume: 0.28
+    pitchJitter: 0
+  - id: 2
+    clips:
+    - {fileID: 8300000, guid: 1456deec11b77984bbdeb1f99a94597f, type: 3}
+    - {fileID: 8300000, guid: 29c09e3c53820154aa16b684025f1ca5, type: 3}
+    - {fileID: 8300000, guid: f76369f45203ffd479827b86eb0175bc, type: 3}
+    volume: 0.55
+    pitchJitter: 0.08
+  - id: 3
+    clips:
+    - {fileID: 8300000, guid: 4c7110a63587f5a48a1ce61fccedb3f0, type: 3}
+    - {fileID: 8300000, guid: 21365570e342b1c44b0b39d4ecf74a5d, type: 3}
+    volume: 0.6
+    pitchJitter: 0.06
+  - id: 4
+    clips:
+    - {fileID: 8300000, guid: 1cdb648a33bcb744ab48fc7b449bcbdb, type: 3}
+    - {fileID: 8300000, guid: 09840f22866edde47b810e0e302fc4b9, type: 3}
+    - {fileID: 8300000, guid: 06f00de116547ff4989e7d6b1c73d9e2, type: 3}
+    volume: 0.7
+    pitchJitter: 0.07
+  - id: 5
+    clips:
+    - {fileID: 8300000, guid: 633806e8468e6eb4f8b0ca812d27decc, type: 3}
+    - {fileID: 8300000, guid: a527064e6a0f33846917003432bd44ac, type: 3}
+    volume: 0.75
+    pitchJitter: 0.05
+  - id: 6
+    clips:
+    - {fileID: 8300000, guid: bbaaf40e849d6644291410d69b7fe84f, type: 3}
+    volume: 0.85
+    pitchJitter: 0
+  - id: 7
+    clips:
+    - {fileID: 8300000, guid: ada7eb69b1e9617478b596b0a52586d6, type: 3}
+    volume: 0.6
+    pitchJitter: 0.05
+  - id: 8
+    clips:
+    - {fileID: 8300000, guid: 6fe387d1bad1b76479343e9a604cb4df, type: 3}
+    volume: 0.75
+    pitchJitter: 0
+  - id: 9
+    clips:
+    - {fileID: 8300000, guid: 3d947dc7cdcaad8438c1934124fff060, type: 3}
+    volume: 0.7
+    pitchJitter: 0.05
+  - id: 10
+    clips:
+    - {fileID: 8300000, guid: 486c6ac0ae5d8644e9e31d0579e906e5, type: 3}
+    volume: 0.5
+    pitchJitter: 0
+  - id: 11
+    clips:
+    - {fileID: 8300000, guid: 758daffdd36be5646b96fab2bcb499c0, type: 3}
+    volume: 0.6
+    pitchJitter: 0
+  - id: 12
+    clips:
+    - {fileID: 8300000, guid: 6d6b3bed597bb474f912edae165ef6e7, type: 3}
+    volume: 0.45
+    pitchJitter: 0
+  - id: 13
+    clips:
+    - {fileID: 8300000, guid: 89dd5ecd413dddb408205ac131031164, type: 3}
+    volume: 0.6
+    pitchJitter: 0
+  - id: 14
+    clips:
+    - {fileID: 8300000, guid: e31570824a0f58e4eb66202984a993a6, type: 3}
+    volume: 0.6
+    pitchJitter: 0
+  - id: 15
+    clips:
+    - {fileID: 8300000, guid: f8ab62f38f655aa40a462e169b0b9c75, type: 3}
+    volume: 0.45
+    pitchJitter: 0
+  - id: 16
+    clips:
+    - {fileID: 8300000, guid: 077c1070082661849841552a719a071c, type: 3}
+    volume: 0.55
+    pitchJitter: 0
+  - id: 17
+    clips:
+    - {fileID: 8300000, guid: b60e309ef71be5140a1e0d19942b38f3, type: 3}
+    volume: 0.6
+    pitchJitter: 0
+  - id: 18
+    clips:
+    - {fileID: 8300000, guid: cb3ba5ce8c7d2d94baaa46833edc9fa9, type: 3}
+    volume: 0.35
+    pitchJitter: 0.05
+  - id: 19
+    clips:
+    - {fileID: 8300000, guid: 2aa1025c1ebedd346970ddd5fc5d1673, type: 3}
+    volume: 0.5
+    pitchJitter: 0
