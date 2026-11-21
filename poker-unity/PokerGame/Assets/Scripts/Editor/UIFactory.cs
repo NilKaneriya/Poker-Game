@@ -1,4 +1,5 @@
 using System;
+using Poker.UI;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -96,6 +97,7 @@ namespace Poker.EditorTools
         {
             var img = Img(parent, name, UISprites.Rounded, background, radius, raycast: true);
             var button = img.gameObject.AddComponent<Button>();
+            img.gameObject.AddComponent<ButtonClickSound>(); // every button clicks
             button.targetGraphic = img;
             var colors = button.colors;
             colors.normalColor = Color.white;
@@ -233,6 +235,16 @@ namespace Poker.EditorTools
             var prop = so.FindProperty(field)
                 ?? throw new ArgumentException($"{target.GetType().Name} has no serialized field '{field}'");
             prop.objectReferenceValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>Set a serialized enum field (by its C# value).</summary>
+        public static void WireEnum(Object target, string field, Enum value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field)
+                ?? throw new ArgumentException($"{target.GetType().Name} has no serialized field '{field}'");
+            prop.enumValueIndex = Array.IndexOf(Enum.GetValues(value.GetType()), value);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
