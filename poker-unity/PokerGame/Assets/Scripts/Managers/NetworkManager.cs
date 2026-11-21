@@ -104,6 +104,20 @@ namespace Poker.Network
 
         public void Rebuy() => Emit(PokerEvents.Rebuy);
 
+        // ---------- Transport for feature modules ----------
+        // Modules such as Chat have their own events and payloads. They use the socket
+        // through these two methods, so this class never needs to know about them.
+
+        /// <summary>Subscribe to a server event; the JSON payload is parsed into T.</summary>
+        public void Listen<T>(string eventName, Action<T> handler) => On(eventName, handler);
+
+        /// <summary>Send an event, with or without a payload (serialized to JSON).</summary>
+        public void Send(string eventName, object payload = null)
+        {
+            if (payload == null) Emit(eventName);
+            else Emit(eventName, payload);
+        }
+
         // ---------- Server -> Client ----------
 
         private void RegisterHandlers()

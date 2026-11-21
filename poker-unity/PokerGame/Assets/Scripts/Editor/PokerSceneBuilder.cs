@@ -1,6 +1,7 @@
 using System.IO;
 using Poker.Core;
 using Poker.EditorTools.Audio;
+using Poker.EditorTools.Chat;
 using Poker.UI;
 using Poker.UI.Game;
 using Poker.UI.Lobby;
@@ -669,6 +670,7 @@ namespace Poker.EditorTools
             // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
             var rankingsButton = MakeButton(canvas, "HandRankingsButton", "♠  Hand rankings", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 24);
             rankingsButton.GetComponent<RectTransform>().Pin(new Vector2(0f, 0f), 28, 28, 250, 60);
+            ChatPanelBuilder.Build(canvas, buttonX: 296, margin: 28); // chat module: button next to the rankings hint
             var rankings = BuildHandRankingsPanel(canvas);
 
             AddSceneMusic(SoundId.MusicTable);
