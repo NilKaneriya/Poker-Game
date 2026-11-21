@@ -26,11 +26,17 @@ poker-server/              Node game server (server-authoritative)
 poker-unity/PokerGame/     Unity client
   Assets/Scene/            Splash -> Lobby -> Game
   Assets/Scripts/
-    Core/                  Scene names, server config, shared helpers
-    Network/               Login (HTTP), real-time connection (Socket.IO), message models
-    UI/                    One folder per scene + Common (toasts, animations, status)
+    Core/                  Constants (all static data), server config, app services
+    Network/               DataModel (all data shapes), HTTP client
+    Managers/              Login and real-time connection (Socket.IO)
+    Platform/              Invite links, clipboard / share sheet
+    Gameplay/              Client-side hand evaluator (display only)
+    UI/                    One folder per scene + Common; Game/ has Table, Panels,
+                           Presenters, Animation, Preview
     Editor/                Tools > Poker > Build Scenes (generates the scenes and UI art)
 ```
+
+See [CODE_GUIDE.md](CODE_GUIDE.md) for what every class does and the current status.
 
 ## How to run
 
