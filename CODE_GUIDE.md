@@ -120,6 +120,23 @@ Chat never imports game code (a unit test enforces this). `src/index.js` calls `
 
 The game side only publishes neutral events through `network/gameEvents.js` (player joined / waiting / seated / left, bot replaced, hand finished, table closed). It does not know who listens.
 
+### `src/storage/`: player data (MongoDB or JSON files)
+| File | Responsibility |
+|---|---|
+| `index.js` | `createStorage({ mongoUri, mongoDb, dataDir })`: MongoDB when `MONGODB_URI` is set (creates the unique `usernameLower` index and a TTL index that deletes expired tokens), JSON files otherwise. Splits an old `accounts.json` once. |
+| `MongoCollection.js` | `get / findOne / set / update / delete` on a MongoDB collection (`_id` = id). |
+| `JsonCollection.js` | The same API on one JSON file (or in memory for tests). |
+
+Services get collections through `attach(storage)` at start-up (`src/index.js`), so tests can hand them an in-memory store.
+
+### Profile and settings (`src/services/`, `src/network/`)
+| File | Responsibility |
+|---|---|
+| `profileRules.js` | Pure rules: display name, avatar (0-11), bio (80 chars), settings schema with types, ranges and defaults. |
+| `ProfileService.js` | Read the profile, save edits, merge settings. Never returns the password hash or salt. |
+| `profileRoutes.js` | `GET /profile/me`, `PUT /profile`, `PUT /profile/settings` (login token required). |
+| `profileSync.js` | After an edit: update the player's sockets (chat name) and their seat at the table at once. |
+
 ### Tests and scripts
 - `npm test`: **54 unit tests** for cards, evaluator, pots, hands, table and bots.
 - `npm test`: also covers **player stats**.
@@ -232,6 +249,18 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `ChatPanel` | "Chat" button with unread badge, message list, quick phrases, text box. |
 | `Editor/Chat/ChatPanelBuilder` | Builds the chat UI; the scene builder only calls `ChatPanelBuilder.Build(canvas, ...)`. |
 
+### Profile and settings (client)
+| Class | Responsibility |
+|---|---|
+| `Managers/SettingsManager` | The one place every setting lives: loads from the device, applies to Audio and SessionClock, saves on change, raises `Changed` / `ChangedByPlayer`. |
+| `Managers/ProfileManager` | Loads the profile after each login, applies account settings (or uploads the device's the first time), saves profile edits, saves setting changes to the account after a 1 s pause. |
+| `UI/Common/ModalPanel` | Shared open/close for pop-ups (fade, pop, backdrop click, Escape). |
+| `UI/Common/SettingsPanel` | Music/sound on/off and volume, hand-strength hint, four-colour deck, chat on/off, break reminders. |
+| `UI/Common/AvatarView` | Coloured circle + suit symbol for an avatar id. |
+| `UI/Lobby/ProfileCardView` | Avatar and display name in the lobby top bar; opens the editor. |
+| `UI/Lobby/ProfilePanel` | Edit avatar, display name and bio; sends only changed fields; shows the server's error. |
+| `Editor/ProfileUIBuilder` | Builds all of the above. |
+
 ### Editor
 | Class | Responsibility |
 |---|---|
@@ -268,7 +297,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
 
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**. **table chat (separate module)**. **72 unit tests pass**, and the **end-to-end test** (`npm run test:e2e`) passes.
+- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**, **table chat (separate module)**, **profiles and settings saved in MongoDB (or JSON files)**. **93 unit tests pass**, the storage tests also pass on a real MongoDB (`npm run test:mongo`), and the **end-to-end test** passes on both backends (`npm run test:e2e`, `npm run test:e2e:mongo`).
 - Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
 **Before submitting**
@@ -295,6 +324,10 @@ Every requirement in the task brief is mapped to its implementation in the READM
 **How does the waiting room start for everyone at once?** The server flips `started` and deals; every client receives the same snapshot and closes its waiting room.
 
 **Why a second hand evaluator on the client?** Only to *show* "you have One Pair" instantly. It never decides a winner; the server's evaluator does.
+
+**How is player data stored?** In MongoDB when `MONGODB_URI` is set, otherwise in JSON files. Both sit behind the same five-method collection interface (`src/storage`), so services are written once and the same tests run on both (`npm test` and `npm run test:mongo`). The username has a unique index; login tokens are stored as SHA-256 hashes with a TTL index so MongoDB deletes expired ones.
+
+**How do settings sync?** Settings are applied and saved on the device at once (they work offline and before login). `ProfileManager` saves player changes to the account after a 1-second pause, so dragging a slider sends one request. On login the account's settings win, except the very first time, when the device's are uploaded (`settingsSaved` flag).
 
 **How is chat separate from the game?** The game publishes events (`gameEvents.js`) and never imports chat. Chat gets three functions/objects from `index.js` (which table a player is at, its room, the events). A test fails if any chat file imports game code. In Unity, `Poker.Chat` has its own constants, models and client and uses the socket only through `NetworkManager.Listen/Send`. You could delete chat by removing two folders and two lines.
 

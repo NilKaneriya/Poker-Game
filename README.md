@@ -10,6 +10,7 @@ the server**.
 | Client | Unity 2022.2.20f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
 | Networking | **Socket.IO v4**: Node server + the Firesplash Entertainment Socket.IO client in Unity (`Assets/Firesplash Entertainment`). Login over HTTP/JSON. |
 | Server | Node.js 18+, Express, Socket.IO |
+| Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set; JSON files otherwise |
 
 **Target layout:** desktop, landscape (designed at 1920x1080 and scaling to any
 landscape window, in the browser via WebGL or as a Windows build). It also runs on
@@ -36,10 +37,19 @@ See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 ```
 cd poker-server
 npm install
-cp .env.example .env      # optional: blinds, turn time, ports, data files
+cp .env.example .env      # optional: blinds, turn time, ports, MongoDB
 npm start
 ```
 The server listens on `http://localhost:3000`; `GET /health` returns `{"status":"ok"}`.
+
+**Player data (accounts, profiles, settings, login tokens, stats):**
+- **MongoDB:** set `MONGODB_URI` (and optionally `MONGODB_DB`, default `poker`) in `.env`,
+  e.g. a free MongoDB Atlas cluster. Collections `users`, `tokens` and `stats` and their
+  indexes are created on start; expired login tokens are deleted by MongoDB (TTL index).
+- **No database:** leave `MONGODB_URI` empty and the same data is saved as JSON files in
+  `DATA_DIR` (default `./data`). Handy for running the project with nothing installed.
+
+The start-up log says which one is used (`Player data: MongoDB ...` or `JSON files ...`).
 
 ### Client (Unity Editor)
 1. Open `poker-unity/PokerGame` with **Unity 2022.2.20f1**.
@@ -62,14 +72,20 @@ talking to an http server.
 4. To put it online, deploy `poker-server/` (including `public/`) to any Node host,
    for example a Render or Railway "Web Service" with start command `npm start`. The
    host provides https, and invite links and the server address follow automatically.
-   Note that many free hosts reset files on redeploy, which clears saved accounts and stats.
+   Set `MONGODB_URI` on the host: many free hosts reset files on redeploy, which
+   would clear accounts, profiles and stats saved as JSON files.
 
 ### Automated tests
 ```
 cd poker-server
-npm test            # 72 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, waiting list, chat
-npm run test:e2e    # starts a throwaway server and plays through the network: login, join by code,
-                    # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat), stats, chat, seat freed after disconnect
+npm test               # 93 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
+                       # waiting list, chat, storage, accounts, profile and settings rules
+npm run test:mongo     # the storage/account/profile/stats tests again on a real MongoDB
+                       # (mongodb-memory-server downloads one the first time; nothing to install)
+npm run test:e2e       # starts a throwaway server and plays through the network: login, join by code,
+                       # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat),
+                       # stats, chat, profile + settings, seat freed after disconnect
+npm run test:e2e:mongo # the same end-to-end run with the server on MongoDB
 npm run play:bots   # watch real hands against bots in the console (against a running server)
 ```
 
@@ -147,6 +163,19 @@ Socket.IO handshake, so a player's identity never comes from client data. The sa
 token lets a dropped player reconnect to their seat. *Remember me* stores only the
 token (30 days); logging out revokes it.
 
+**Player data behind one small interface.** `src/storage` gives every service the same
+async collections (`get`, `findOne`, `set`, `update`, `delete`) backed by MongoDB or JSON
+files. Accounts, profiles, settings and stats are written once, and the same tests run
+against both backends. Profile and settings rules (`services/profileRules.js`) are pure
+functions: display name 3-16 characters, avatar 0-11, bio up to 80 characters, settings
+whitelisted and typed. Unknown fields are never stored.
+
+**Profile and settings follow the account.** The client keeps settings on the device
+(works offline and before login) and `ProfileManager` saves player changes to the
+account a moment later. On login the account's settings replace the device's, except the
+first time, when the device's choices are uploaded. A profile edit shows at once on the
+player's seat and in chat (`network/profileSync.js`).
+
 **Tables: two modes.** *Play with friends* tables wait in a waiting room until every
 seat is filled (or the host starts), so everyone starts together. *Play vs bots*
 tables fill empty seats with bots. Bots are kept out of friends tables on purpose,
@@ -205,6 +234,7 @@ editor tool, so the scenes are reproducible from code.
 | One retention feature | Player statistics (`StatsService.js`, lobby *Your stats*) |
 | Long-session notification with off switch | *Time for a break?* after 1 h (`SessionClock`, `BreakReminderPanel`), toggle in lobby |
 | Optional: sound and dealing animations | Dealing, chips, street banners; music and sound effects (placeholders made in code) with on/off |
+| Extra: profile and settings in MongoDB | Lobby profile card and editor (avatar, display name, bio); Settings panel in Lobby and Game (music/sound on/off + volume, hand-strength hint, four-colour deck, chat on/off, break reminders); saved per account (`/profile` routes, tested on MongoDB) |
 | Extra: table chat (separate module) | `poker-server/src/chat/` + `Assets/Scripts/Chat/`: table-only messages, quick phrases, unread badge, hand log ("Ava won 300 with Flush"), history for late joiners, 140-char limit, rate limit, swear-word masking, names from the login (tested) |
 | Optional: tests for ranking and pots | `test/handEvaluator.test.js`, `test/pots.test.js` (+ hand, table, bots, stats, e2e) |
 
@@ -214,8 +244,8 @@ editor tool, so the scenes are reproducible from code.
 
 - **Server restart / crash: the hand in progress is lost.** Tables and hands live in
   the server's memory. If the server stops, every table closes and the chips bet in
-  the current hand are not returned. Accounts and statistics are saved to disk and
-  survive. While the server is unreachable clients show *"Connection lost.
+  the current hand are not returned. Accounts, profiles, settings and statistics
+  are saved (MongoDB or JSON files) and survive. While the server is unreachable clients show *"Connection lost.
   Reconnecting..."*. When it comes back they reconnect automatically, are told *"The
   server restarted, so your table was closed. The hand in progress was not saved."*,
   and return to the lobby, where a new table starts everyone at 1,000 chips again. A
@@ -242,8 +272,10 @@ editor tool, so the scenes are reproducible from code.
 - **The Unity client has no automated tests.** The rules, pots, bots, stats and
   networking are tested on the server; the client is tested by hand (section 2).
 - **Break reminder** counts time since the game was opened on that device.
-- **Free hosting** may sleep when idle (slow first load) and may reset saved
-  accounts and stats on redeploy.
+- **Free hosting** may sleep when idle (slow first load). Without `MONGODB_URI` it may
+  also reset saved accounts and stats on redeploy.
+- **Display names are not unique** (login names are). Two players may both call
+  themselves "Ace"; avatars and the login name in the profile tell them apart.
 
 ---
 
@@ -253,7 +285,8 @@ editor tool, so the scenes are reproducible from code.
 above), plus the optional sound effects, dealing and chip animations, and automated
 tests for hand ranking and pot distribution. Extras: invite links and share sheet,
 waiting room, hand rankings hint, a WebGL build hosted by the server, joining a
-bots game by code (take a bot's seat after the hand), and table chat.
+bots game by code (take a bot's seat after the hand), table chat, player profiles
+(avatar, display name, bio), a settings panel, and MongoDB storage.
 
 **Chat is a separate module.** `poker-server/src/chat/` never imports game code: the
 game publishes neutral events (`network/gameEvents.js`: player joined, hand
@@ -266,6 +299,9 @@ two lines.
 
 **Left out:**
 - Private messages, muting or reporting a player in chat (table chat only).
+- Uploaded profile pictures (12 built-in avatars instead: nothing to moderate or host).
+- Leaderboards and other competitive retention features: the brief asks for one
+  responsible retention feature (stats), so the profile only shows facts.
 - Persistent tables and refunds after a server crash (see Known issues).
 - Gameplay video (record a 3-player hand following section 2).
 
@@ -278,7 +314,9 @@ poker-server/              Node game server (server-authoritative)
   src/engine/              Pure poker rules: cards, hand evaluation, pots, hand/table state
   src/network/             Socket.IO handlers, per-player views, turn timer, reconnect grace,
                            WebGL hosting
-  src/services/            Tables, accounts + login tokens, player stats
+  src/services/            Tables, accounts + login tokens, profiles + settings, player stats
+  src/storage/             MongoDB or JSON-file collections behind one interface
+  src/chat/                Table chat (separate module)
   src/bots/                Computer opponents (3 levels)
   test/                    Unit tests (node:test)
   scripts/                 End-to-end test, bot game viewer
@@ -287,7 +325,8 @@ poker-unity/PokerGame/     Unity client
   Assets/Scripts/
     Core/                  Constants (all static data), server config, app services
     Network/               DataModel (all data shapes), HTTP client
-    Managers/              Login, real-time connection, audio, session clock
+    Managers/              Login, real-time connection, profile, settings, audio, session clock
+    Chat/                  Table chat (separate module)
     Audio/                 Sound library asset
     Platform/              Invite links, clipboard / share sheet
     Gameplay/              Client-side hand evaluator (display only)
