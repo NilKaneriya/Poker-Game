@@ -37,6 +37,9 @@ namespace Poker.UI.Lobby
         [SerializeField] private TableListItemView listItemPrefab;
         [SerializeField] private GameObject emptyState;
 
+        [Header("Your stats")]
+        [SerializeField] private PlayerStatsView statsView;
+
         [SerializeField] private ToastView toast;
 
         private readonly List<TableListItemView> rows = new List<TableListItemView>();
@@ -83,14 +86,19 @@ namespace Poker.UI.Lobby
             Net.SessionStarted += OnSessionStarted;
             Net.TableListReceived += ShowTables;
             Net.TableStateReceived += OnSeated;
+            Net.StatsReceived += statsView.Show;
             Net.ServerErrorReceived += toast.Show;
             Net.AuthRejected += BackToSplash;
             InviteLinkService.Received += OnInviteReceived;
 
             ShowTables(new List<TableSummary>());
+            string notice = SceneNotice.Take(); // e.g. "your table was closed"
+            if (notice != null) toast.Show(notice, 6f);
+
             if (Net.IsConnected)
             {
                 Net.RequestTableList();
+                Net.RequestStats();
                 JoinInvite();
             }
             else if (!Net.HasConnectedOnce) Net.Connect(); // otherwise auto-reconnect is already running
@@ -103,13 +111,14 @@ namespace Poker.UI.Lobby
             Net.SessionStarted -= OnSessionStarted;
             Net.TableListReceived -= ShowTables;
             Net.TableStateReceived -= OnSeated;
+            if (statsView != null) Net.StatsReceived -= statsView.Show;
             if (toast != null) Net.ServerErrorReceived -= toast.Show;
             Net.AuthRejected -= BackToSplash;
         }
 
         private void OnSessionStarted(SessionInfo _)
         {
-            Net.RequestTableList();
+            Net.RequestTableList(); // stats arrive with every new session
             JoinInvite();
         }
 

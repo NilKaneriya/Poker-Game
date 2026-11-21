@@ -22,6 +22,7 @@ namespace Poker.UI.Game
     ///   HandResultPresenter  win / lose / out-of-chips screens
     ///   MyHandPresenter      your current hand (pill under your chips + chart mark)
     ///   TableChangeAnimator  chips, dealing and street banners between snapshots
+    ///   TableSoundCues       sounds between snapshots; TurnTimerAlert ticks on your turn
     ///   TableInviteActions   copy code / link, share invite
     /// </summary>
     public class GameController : MonoBehaviour
@@ -37,6 +38,7 @@ namespace Poker.UI.Game
         [SerializeField] private SeatsView seats;
         [SerializeField] private BoardView board;
         [SerializeField] private TableChangeAnimator animator;
+        [SerializeField] private TurnTimerAlert timerAlert;
 
         [Header("Panels")]
         [SerializeField] private WaitingRoomPanel waitingRoom;
@@ -55,6 +57,7 @@ namespace Poker.UI.Game
         private HandResultPresenter results;
         private MyHandPresenter myHand;
         private TableInviteActions invites;
+        private TableSoundCues sounds;
 
         private void Awake()
         {
@@ -62,6 +65,7 @@ namespace Poker.UI.Game
             results = new HandResultPresenter(resultPanel, board, seats);
             myHand = new MyHandPresenter(seats, handRankingsPanel);
             invites = new TableInviteActions(toast);
+            sounds = new TableSoundCues();
         }
 
         private void Start()
@@ -69,9 +73,10 @@ namespace Poker.UI.Game
             WireInput();
 
             Net.TableStateReceived += Render;
-            Net.ActionRejected += toast.Show;
+            Net.ActionRejected += OnActionRejected;
             Net.ServerErrorReceived += OnServerError;
             Net.AuthRejected += OnAuthRejected;
+            Net.TableLost += OnTableLost;
 
             actionBar.Hide();
             resultPanel.Hide();
@@ -85,9 +90,10 @@ namespace Poker.UI.Game
         {
             if (Net == null) return;
             Net.TableStateReceived -= Render;
-            if (toast != null) Net.ActionRejected -= toast.Show;
+            Net.ActionRejected -= OnActionRejected;
             Net.ServerErrorReceived -= OnServerError;
             Net.AuthRejected -= OnAuthRejected;
+            Net.TableLost -= OnTableLost;
         }
 
         private void WireInput()
@@ -125,6 +131,8 @@ namespace Poker.UI.Game
             results.Render(state);
             myHand.Render(state);
             if (animator != null) animator.Play(previous, state);
+            sounds.Play(previous, state);
+            if (timerAlert != null) timerAlert.Track(state);
         }
 
         private void LeaveTable()
@@ -133,10 +141,24 @@ namespace Poker.UI.Game
             SceneManager.LoadScene(SceneNames.Lobby);
         }
 
+        private void OnActionRejected(string reason)
+        {
+            toast.Show(reason);
+            sounds.PlayError();
+        }
+
         private void OnServerError(string message)
         {
             toast.Show(message);
+            sounds.PlayError();
             if (table != null && !table.started) waitingRoom.Render(table); // re-enable "Start now" after a refusal
+        }
+
+        /// <summary>Reconnected, but the table is gone (the server restarted): explain and go back to the lobby.</summary>
+        private void OnTableLost()
+        {
+            SceneNotice.Set(GameTexts.TableClosed);
+            SceneManager.LoadScene(SceneNames.Lobby);
         }
 
         private void OnAuthRejected()

@@ -20,13 +20,16 @@ namespace Poker.UI
             group.blocksRaycasts = false;
         }
 
-        public void Show(string message)
+        public void Show(string message) => Show(message, visibleSeconds);
+
+        /// <summary>Show for a custom time, e.g. longer for important notices.</summary>
+        public void Show(string message, float seconds)
         {
             messageText.text = message;
             group.DOKill();
             DOTween.Sequence()
                 .Append(group.DOFade(1f, 0.15f))
-                .AppendInterval(visibleSeconds)
+                .AppendInterval(seconds)
                 .Append(group.DOFade(0f, 0.3f))
                 .SetTarget(group);
             UIAnim.Punch(transform, 0.08f);

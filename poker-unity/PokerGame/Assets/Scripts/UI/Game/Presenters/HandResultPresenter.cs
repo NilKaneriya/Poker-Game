@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Poker.Core;
 using static Poker.Core.Constants;
 using static Poker.Network.DataModel;
 
@@ -43,13 +44,26 @@ namespace Poker.UI.Game
             if (hand?.result == null || resultShownForHand == state.handNumber) return;
             resultShownForHand = state.handNumber;
 
-            WinnerInfo myWin = hand.result.winners.Find(w => w.playerId == state.you?.playerId);
-            WinnerInfo topWinner = hand.result.winners.Count > 0 ? hand.result.winners[0] : null;
-            if (myWin != null) panel.ShowWin(myWin.amount, myWin.handName, myWin.bestCards);
+            List<WinnerInfo> winners = hand.result.winners;
+            WinnerInfo myWin = winners.Find(w => w.playerId == state.you?.playerId);
+            WinnerInfo topWinner = winners.Count > 0 ? winners[0] : null;
+
+            if (winners.Count > 1) panel.ShowShared(SharedTitle(winners), WinnersLine(winners), myWin?.amount ?? 0, topWinner.bestCards);
+            else if (myWin != null) panel.ShowWin(myWin.amount, myWin.handName, myWin.bestCards);
             else if (topWinner != null) panel.ShowLoss(topWinner.name, topWinner.amount, topWinner.handName, topWinner.bestCards);
 
             HighlightWinningCards(state, hand, topWinner);
         }
+
+        /// <summary>Same hand for everyone = a tie ("Split pot"); different hands = side pots won by different players.</summary>
+        private static string SharedTitle(List<WinnerInfo> winners) =>
+            winners.TrueForAll(w => w.handName == winners[0].handName) ? GameTexts.SplitPot : GameTexts.PotsWon;
+
+        /// <summary>"Maya +300 (Flush)  •  Leo +150 (Straight)"</summary>
+        private static string WinnersLine(List<WinnerInfo> winners) =>
+            string.Join("  •  ", winners.ConvertAll(w => string.IsNullOrEmpty(w.handName)
+                ? string.Format(GameTexts.WinnerShare, w.name, CardFormat.Chips(w.amount))
+                : string.Format(GameTexts.WinnerShareWithHand, w.name, CardFormat.Chips(w.amount), w.handName)));
 
         private void HighlightWinningCards(TableState state, HandState hand, WinnerInfo winner)
         {

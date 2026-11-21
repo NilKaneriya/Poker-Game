@@ -1,5 +1,6 @@
 using System.IO;
 using Poker.Core;
+using Poker.EditorTools.Audio;
 using Poker.UI;
 using Poker.UI.Game;
 using Poker.UI.Lobby;
@@ -87,6 +88,7 @@ namespace Poker.EditorTools
             Directory.CreateDirectory(PrefabsFolder);
             UISprites.Generate();
             CreateServerConfig();
+            PlaceholderSoundGenerator.Generate(); // fills Resources/SoundLibrary (keeps clips you assigned)
 
             var rowPrefab = BuildTableListItemPrefab();
             string splash = BuildSplash();
@@ -154,6 +156,59 @@ namespace Poker.EditorTools
 
         private static T AddController<T>(string name) where T : MonoBehaviour =>
             new GameObject(name).AddComponent<T>();
+
+        /// <summary>The scene's music track (crossfades from the previous scene).</summary>
+        private static void AddSceneMusic(SoundId track)
+        {
+            var music = AddController<SceneMusic>("SceneMusic");
+            WireEnum(music, "track", track);
+        }
+
+        /// <summary>"Music" and "Sound" on/off buttons, right-aligned at (x, y) from the anchor.</summary>
+        private static void BuildAudioToggles(Transform parent, Vector2 anchor, float x, float y)
+        {
+            var settings = new[] { SettingToggleButton.Setting.Sound, SettingToggleButton.Setting.Music };
+            for (int i = 0; i < settings.Length; i++)
+                BuildSettingToggle(parent, settings[i], anchor, x - i * 112, y, 104, 48);
+        }
+
+        private static Button BuildSettingToggle(Transform parent, SettingToggleButton.Setting setting, Vector2 anchor,
+            float x, float y, float w, float h)
+        {
+            var button = MakeButton(parent, setting + "Toggle", "", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 20, 16f);
+            button.GetComponent<RectTransform>().Pin(anchor, x, y, w, h);
+            var toggle = button.gameObject.AddComponent<SettingToggleButton>();
+            WireEnum(toggle, "setting", setting);
+            Wire(toggle, "label", LabelOf(button));
+            Wire(toggle, "group", Group(button));
+            return button;
+        }
+
+        /// <summary>"Time for a break?" overlay after a long session (responsible play).</summary>
+        private static void BuildBreakReminder(Transform canvas)
+        {
+            var root = Node("BreakReminder", canvas).Fill();
+            var group = Group(root, 0f);
+            Img(root, "Dim", null, Color.black.WithAlpha(0.6f), raycast: true).rectTransform.Fill();
+            var card = Panel(root, "Card", Theme.Panel, 30f);
+            card.rectTransform.At(0, 0, 760, 380);
+            Panel(card.transform, "HeaderBar", Theme.Green, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 260, 12);
+            MakeText(card.transform, "Title", WellbeingTexts.Title, 44, Theme.Text, bold: true).rectTransform.At(0, 110, 680, 60);
+            var body = MakeText(card.transform, "Body", WellbeingTexts.Body, 26, Theme.Muted);
+            body.rectTransform.At(0, 20, 660, 110);
+            var keep = MakeButton(card.transform, "KeepPlayingButton", WellbeingTexts.KeepPlaying, Theme.Green, Theme.Dark, 26);
+            keep.GetComponent<RectTransform>().At(-150, -115, 260, 68);
+            var off = MakeButton(card.transform, "TurnOffButton", WellbeingTexts.TurnOff, Theme.PanelLight, Theme.Text, 24);
+            off.GetComponent<RectTransform>().At(150, -115, 260, 68);
+
+            var panel = root.gameObject.AddComponent<BreakReminderPanel>();
+            Wire(panel, "group", group);
+            Wire(panel, "card", card.rectTransform);
+            Wire(panel, "bodyText", body);
+            Wire(panel, "keepPlayingButton", keep);
+            Wire(panel, "turnOffButton", off);
+            root.gameObject.SetActive(false);
+        }
 
         /// <summary>Hidden message pill; anchor (0.5,1) = top centre, (0.5,0) = bottom centre.</summary>
         private static ToastView BuildToast(Transform canvas, Vector2 anchor, float y)
@@ -316,6 +371,7 @@ namespace Poker.EditorTools
             error.rectTransform.At(0, -265, 560, 34);
             login.gameObject.SetActive(false);
 
+            AddSceneMusic(SoundId.MusicLobby);
             var controller = AddController<SplashController>("SplashController");
             Wire(controller, "loadingGroup", loadingGroup);
             Wire(controller, "progressFill", fill.rectTransform);
@@ -385,6 +441,7 @@ namespace Poker.EditorTools
             welcome.rectTransform.Pin(new Vector2(1f, 0.5f), -215, 0, 420, 50);
             var banner = BuildLostBanner(canvas, -110, "Connection lost. Reconnecting...");
             BuildConnectionStatus(top.transform, new Vector2(1f, 0.5f), -660, 0, banner);
+            BuildAudioToggles(top.transform, new Vector2(1f, 0.5f), -880, 0);
 
             // Left column: create, join, how it works
             var create = Panel(canvas, "CreateCard", Theme.Panel, 24f);
@@ -436,12 +493,33 @@ namespace Poker.EditorTools
             var joinButton = MakeButton(join.transform, "JoinButton", "Join", Theme.Green, Theme.Dark, 28);
             joinButton.GetComponent<RectTransform>().At(195, -48, 170, 70);
 
-            var how = Panel(canvas, "HowItWorks", Theme.Panel.WithAlpha(0.6f), 24f);
-            how.rectTransform.At(-590, -337, 640, 176);
-            MakeText(how.transform, "Title", "How it works", 26, Theme.Gold, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 56, 560, 36);
-            MakeText(how.transform, "Body",
-                "•  Everyone starts with 1,000 virtual chips\n•  No real money and no purchases, ever\n•  Each turn has a 30-second timer",
-                22, Theme.Muted, TextAlignmentOptions.TopLeft).rectTransform.At(0, -22, 560, 100);
+            // Your stats (the one retention feature: facts only, no goals or streaks)
+            var statsCard = Panel(canvas, "StatsCard", Theme.Panel.WithAlpha(0.6f), 24f);
+            statsCard.rectTransform.At(-590, -337, 640, 176);
+            MakeText(statsCard.transform, "Title", LobbyTexts.StatsTitle, 26, Theme.Gold, TextAlignmentOptions.Left, bold: true)
+                .rectTransform.At(0, 56, 560, 36);
+            string[] statLabels = { LobbyTexts.HandsPlayed, LobbyTexts.HandsWon, LobbyTexts.BiggestPot, LobbyTexts.BestHand };
+            var statValues = new TextMeshProUGUI[statLabels.Length];
+            for (int i = 0; i < statLabels.Length; i++)
+            {
+                float x = -225 + i * 150;
+                statValues[i] = MakeText(statsCard.transform, "Value" + i, LobbyTexts.NoValue, 28, Theme.Text, bold: true);
+                statValues[i].rectTransform.At(x, -8, 146, 40);
+                statValues[i].enableAutoSizing = true;
+                statValues[i].fontSizeMin = 16;
+                statValues[i].fontSizeMax = 28;
+                MakeText(statsCard.transform, "Label" + i, statLabels[i], 18, Theme.Muted).rectTransform.At(x, -48, 146, 28);
+            }
+            var statsView = statsCard.gameObject.AddComponent<PlayerStatsView>();
+            Wire(statsView, "handsPlayedText", statValues[0]);
+            Wire(statsView, "handsWonText", statValues[1]);
+            Wire(statsView, "biggestPotText", statValues[2]);
+            Wire(statsView, "bestHandText", statValues[3]);
+
+            // Footer: break reminder switch + free-to-play note
+            BuildSettingToggle(canvas, SettingToggleButton.Setting.BreakReminders, new Vector2(0f, 0f), 28, 22, 300, 46);
+            MakeText(canvas, "FreeToPlay", LobbyTexts.FreeToPlay, 20, Theme.Muted, TextAlignmentOptions.Left)
+                .rectTransform.Pin(new Vector2(0f, 0f), 350, 22, 620, 46);
 
             // Right: open tables
             var tables = Panel(canvas, "TablesPanel", Theme.Panel, 24f);
@@ -456,7 +534,9 @@ namespace Poker.EditorTools
             empty.rectTransform.At(0, -20, 800, 120);
 
             var toast = BuildToast(canvas, new Vector2(0.5f, 0f), 24);
+            BuildBreakReminder(canvas);
 
+            AddSceneMusic(SoundId.MusicLobby);
             var controller = AddController<LobbyController>("LobbyController");
             Wire(controller, "welcomeText", welcome);
             Wire(controller, "logoutButton", logout);
@@ -471,6 +551,7 @@ namespace Poker.EditorTools
             Wire(controller, "listContent", content);
             Wire(controller, "listItemPrefab", rowPrefab);
             Wire(controller, "emptyState", empty.gameObject);
+            Wire(controller, "statsView", statsView);
             Wire(controller, "toast", toast);
 
             return Save(scene, SceneNames.Lobby);
@@ -576,11 +657,13 @@ namespace Poker.EditorTools
 
             var leave = MakeButton(canvas, "LeaveButton", "Leave", Theme.Red, Color.white, 24);
             leave.GetComponent<RectTransform>().Pin(new Vector2(1f, 1f), -28, -28, 150, 58);
-            var banner = BuildLostBanner(canvas, 0, "Connection lost. Reconnecting... your seat and chips are kept.");
+            var banner = BuildLostBanner(canvas, 0, GameTexts.ConnectionLost);
             BuildConnectionStatus(canvas, new Vector2(1f, 1f), -196, -35, banner);
+            BuildAudioToggles(canvas, new Vector2(1f, 1f), -28, -98);
 
             var actionBar = BuildActionBar(canvas);
             var toast = BuildToast(canvas, new Vector2(0.5f, 1f), -12);
+            BuildBreakReminder(canvas);
             var result = BuildResultPanel(canvas);
 
             // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
@@ -588,7 +671,9 @@ namespace Poker.EditorTools
             rankingsButton.GetComponent<RectTransform>().Pin(new Vector2(0f, 0f), 28, 28, 250, 60);
             var rankings = BuildHandRankingsPanel(canvas);
 
+            AddSceneMusic(SoundId.MusicTable);
             var controller = AddController<GameController>("GameController");
+            Wire(controller, "timerAlert", controller.gameObject.AddComponent<TurnTimerAlert>());
             Wire(controller, "tableNameText", tableName);
             Wire(controller, "codeText", codeText);
             Wire(controller, "copyCodeButton", copy);

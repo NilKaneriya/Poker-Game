@@ -58,6 +58,13 @@ namespace Poker.UI.Game
             Open(lossColor, "Not this time", $"{winnerName} {how}", CardFormat.Chips(amount) + " chips", cards, busted: false);
         }
 
+        /// <summary>More than one winner (tie or side pots): every winner and their share is listed.</summary>
+        public void ShowShared(string title, string winnersLine, int myShare, List<string> cards)
+        {
+            string amount = myShare > 0 ? "+" + CardFormat.Chips(myShare) : "";
+            Open(myShare > 0 ? winColor : lossColor, title, winnersLine, amount, cards, busted: false);
+        }
+
         public void ShowBusted(int startingChips)
         {
             Open(bustedColor, "Out of chips",
