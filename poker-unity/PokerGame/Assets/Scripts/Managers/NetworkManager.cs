@@ -28,6 +28,9 @@ namespace Poker.Network
         public event Action<TableState> TableStateReceived;
         public event Action<string> ActionRejected;
         public event Action<string> ServerErrorReceived;
+        public event Action<PlayerStats> StatsReceived;
+        /// <summary>We were at a table, but the server says we aren't any more (e.g. it restarted).</summary>
+        public event Action TableLost;
 
         public bool IsConnected => sio != null && sio.Instance.IsConnected();
         public bool HasConnectedOnce { get; private set; }
@@ -63,8 +66,8 @@ namespace Poker.Network
 
             var payload = new SIOAuthPayload();
             payload.AddElement("token", auth.Token); // read by the server as socket.handshake.auth.token
-            Log($"Connecting to {config.serverUrl}");
-            sio.Instance.Connect(config.serverUrl, true, payload);
+            Log($"Connecting to {config.ServerAddress}");
+            sio.Instance.Connect(config.ServerAddress, true, payload);
         }
 
         public void Disconnect()
@@ -77,6 +80,8 @@ namespace Poker.Network
         // ---------- Client -> Server ----------
 
         public void RequestTableList() => Emit(PokerEvents.ListTables);
+
+        public void RequestStats() => Emit(PokerEvents.GetStats);
 
         public void CreateTable(string tableName, string mode, int maxSeats) =>
             Emit(PokerEvents.CreateTable, new CreateTableRequest { tableName = tableName, mode = mode, maxSeats = maxSeats });
@@ -128,7 +133,14 @@ namespace Poker.Network
                 Disconnected?.Invoke(reason);
             });
 
-            On<SessionInfo>(PokerEvents.Session, session => SessionStarted?.Invoke(session));
+            On<SessionInfo>(PokerEvents.Session, session =>
+            {
+                bool lostTable = CurrentTable != null && session.tableCode != CurrentTable.code;
+                if (lostTable) CurrentTable = null;
+                SessionStarted?.Invoke(session);
+                if (lostTable) TableLost?.Invoke();
+            });
+            On<PlayerStats>(PokerEvents.Stats, stats => StatsReceived?.Invoke(stats));
             On<List<TableSummary>>(PokerEvents.TableList, list => TableListReceived?.Invoke(list));
             On<TableState>(PokerEvents.TableState, table =>
             {

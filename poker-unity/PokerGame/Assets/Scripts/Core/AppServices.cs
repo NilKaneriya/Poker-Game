@@ -1,10 +1,11 @@
+using Poker.Audio;
 using Poker.Network;
 using UnityEngine;
 
 namespace Poker.Core
 {
     /// <summary>
-    /// Creates the long-lived services object (login + network) the first time any
+    /// Creates the long-lived services object (login, network, audio, session clock) the first time any
     /// scene needs it. It survives scene loads, so every scene can be played
     /// directly from the Editor and the connection is never duplicated.
     /// </summary>
@@ -18,6 +19,8 @@ namespace Poker.Core
             Object.DontDestroyOnLoad(go);
             go.AddComponent<AuthManager>();
             go.AddComponent<NetworkManager>(); // also adds SocketIOCommunicator (RequireComponent)
+            go.AddComponent<AudioManager>();
+            go.AddComponent<SessionClock>();
         }
     }
 }

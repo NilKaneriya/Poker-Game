@@ -40,6 +40,7 @@ namespace Poker.Core
             public const string JoinTable = "joinTable";
             public const string LeaveTable = "leaveTable";
             public const string StartGame = "startGame";
+            public const string GetStats = "getStats";
             public const string ListTables = "listTables";
             public const string PlayerAction = "playerAction";
             public const string Rebuy = "rebuy";
@@ -48,6 +49,7 @@ namespace Poker.Core
             public const string Session = "session";
             public const string TableList = "tableList";
             public const string TableState = "tableState";
+            public const string Stats = "stats";
             public const string ActionRejected = "actionRejected";
             public const string Error = "errorMessage";
 
@@ -63,6 +65,16 @@ namespace Poker.Core
             public const string AuthToken = "poker.authToken";
             public const string CreateMode = "poker.create.mode";   // last picked TableModes value
             public const string CreateSeats = "poker.create.seats"; // last picked table size
+            public const string MusicOn = "poker.audio.music";      // 1 = on (default), 0 = off
+            public const string SoundOn = "poker.audio.sound";
+            public const string BreakReminders = "poker.wellbeing.breakReminders"; // 1 = on (default), 0 = off
+        }
+
+        /// <summary>Responsible play: a gentle reminder after a long session (can be turned off).</summary>
+        public static class Wellbeing
+        {
+            public const float FirstReminderMinutes = 60f;
+            public const float RepeatReminderMinutes = 60f;
         }
 
         /// <summary>Network timeouts.</summary>
@@ -247,6 +259,77 @@ namespace Poker.Core
         }
 
         // =====================================================================
+        // Audio
+        // =====================================================================
+
+        public static class AudioConfig
+        {
+            public const string LibraryResource = "SoundLibrary"; // Resources/SoundLibrary.asset
+            public const int EffectVoices = 16;                   // sound effects that can play at once
+            public const float MusicFadeSeconds = 1.2f;            // crossfade between scene tracks
+        }
+
+        /// <summary>When sounds play, in seconds (lined up with AnimationTimings).</summary>
+        public static class SoundCueTimings
+        {
+            public const int TimerAlertSeconds = 5;   // ticking starts with this many seconds left on your turn
+            public const int TimerUrgentSeconds = 3;  // ...and turns urgent here
+            public const float BoardFlipDelay = 0.35f;
+            public const float BoardFlipStagger = 0.12f;
+            public const float YourTurnDelay = 0.2f;
+            public const float CollectDelay = 0.25f;
+            public const float WinChipsDelay = AnimationTimings.CollectToPotTime + AnimationTimings.PotToWinnerDelay + AnimationTimings.ChipFlight;
+            public const float ResultJingleDelay = 0.9f;
+            public const int MaxDealSounds = 12;
+        }
+
+        /// <summary>Default mix used when the SoundLibrary is generated (adjustable in the asset afterwards).</summary>
+        public static class SoundDefaults
+        {
+            public static readonly IReadOnlyDictionary<SoundId, float> Volume = new Dictionary<SoundId, float>
+            {
+                { SoundId.MusicLobby, 0.35f }, { SoundId.MusicTable, 0.28f },
+                { SoundId.CardDeal, 0.55f }, { SoundId.CardFlip, 0.6f },
+                { SoundId.ChipBet, 0.7f }, { SoundId.ChipRaise, 0.75f }, { SoundId.ChipAllIn, 0.85f },
+                { SoundId.ChipCollect, 0.6f }, { SoundId.ChipsWin, 0.75f },
+                { SoundId.Check, 0.7f }, { SoundId.Fold, 0.5f },
+                { SoundId.YourTurn, 0.6f }, { SoundId.TimerTick, 0.45f }, { SoundId.TimerUrgent, 0.6f },
+                { SoundId.Win, 0.6f }, { SoundId.Lose, 0.45f }, { SoundId.PlayerJoined, 0.55f }, { SoundId.GameStart, 0.6f },
+                { SoundId.ButtonClick, 0.35f }, { SoundId.Error, 0.5f },
+            };
+
+            /// <summary>Sounds that repeat a lot get a little random pitch so they don't sound robotic.</summary>
+            public static readonly IReadOnlyDictionary<SoundId, float> PitchJitter = new Dictionary<SoundId, float>
+            {
+                { SoundId.CardDeal, 0.08f }, { SoundId.CardFlip, 0.06f }, { SoundId.ChipBet, 0.07f },
+                { SoundId.ChipRaise, 0.05f }, { SoundId.ChipCollect, 0.05f }, { SoundId.Check, 0.05f },
+                { SoundId.ButtonClick, 0.05f },
+            };
+
+            public static bool IsMusic(SoundId id) => id == SoundId.MusicLobby || id == SoundId.MusicTable;
+        }
+
+        /// <summary>Labels of the settings toggle buttons; {0} = On / Off.</summary>
+        public static class SettingTexts
+        {
+            public const string Music = "♪ Music";
+            public const string Sound = "Sound";
+            public const string BreakReminders = "Break reminders: {0}";
+            public const string On = "On";
+            public const string Off = "Off";
+        }
+
+        public static class WellbeingTexts
+        {
+            public const string Title = "Time for a break?";
+            public const string Body = "You've been playing for {0}. Your chips will be right here when you come back.";
+            public const string KeepPlaying = "Keep playing";
+            public const string TurnOff = "Don't remind me";
+            public const string Hours = "{0}h {1:00}m";
+            public const string Minutes = "{0} minutes";
+        }
+
+        // =====================================================================
         // Colours (the Editor's Theme uses these too)
         // =====================================================================
 
@@ -286,6 +369,15 @@ namespace Poker.Core
             public const string BadCodeLength = "Table codes have {0} letters.";
             public const string TableWaiting = "  •  <color=#22C55E>Waiting for players</color>";
             public const string TableInHand = "  •  Hand in progress";
+            public const string FreeToPlay = "Virtual chips only  •  No real money  •  No purchases";
+
+            // Your stats
+            public const string StatsTitle = "Your stats";
+            public const string HandsPlayed = "Hands played";
+            public const string HandsWon = "Hands won";
+            public const string BiggestPot = "Biggest pot";
+            public const string BestHand = "Best hand";
+            public const string NoValue = "-";
         }
 
         /// <summary>Messages shown at the table.</summary>
@@ -301,6 +393,17 @@ namespace Poker.Core
             public const string HandWatching = "You're watching this hand";
             public const string HandFolded = "You folded this hand";
             public const string YourHand = "Your hand: <color=#F6C744><b>{0}</b></color>";
+            public const string DealtInNextHand = "Dealt in next hand";
+
+            // End of hand with more than one winner (split pot or side pots)
+            public const string SplitPot = "Split pot";
+            public const string PotsWon = "Pots won";
+            public const string WinnerShare = "{0} +{1}";
+            public const string WinnerShareWithHand = "{0} +{1} ({2})";
+
+            // Connection
+            public const string ConnectionLost = "Connection lost. Reconnecting... your seat and chips are kept for 2 minutes.";
+            public const string TableClosed = "The server restarted, so your table was closed. The hand in progress was not saved. Create or join a table to keep playing.";
 
             // Waiting room
             public const string RoomStatus = "<color=#F6C744><b>{0}</b></color> of {1} players at the table";

@@ -49,6 +49,18 @@ namespace Poker.Network
         {
             public string playerId;
             public string username;
+            public string tableCode; // the table you are seated at; null if none (e.g. the server restarted)
+        }
+
+        /// <summary>Your own statistics (the game's one retention feature).</summary>
+        [Serializable]
+        public class PlayerStats
+        {
+            public int handsPlayed;
+            public int handsWon;
+            public int biggestPot;
+            public string bestHand;   // e.g. "Full House"; empty until a hand is shown at showdown
+            public int bestHandRank = -1;
         }
 
         [Serializable]
@@ -213,6 +225,56 @@ namespace Poker.Network
             public string Code;
             public string Link;      // null when there is no web address to share
             public string Message;   // text without the link
+        }
+
+        // ---------- Audio ----------
+
+        /// <summary>Every sound the game can play. Clips are assigned in the SoundLibrary asset.</summary>
+        public enum SoundId
+        {
+            // Music (looping)
+            MusicLobby,
+            MusicTable,
+
+            // Cards
+            CardDeal,
+            CardFlip,
+
+            // Chips
+            ChipBet,      // call / blinds
+            ChipRaise,
+            ChipAllIn,
+            ChipCollect,  // bets slide into the pot
+            ChipsWin,     // pot goes to the winner
+
+            // Actions without chips
+            Check,
+            Fold,
+
+            // Turn
+            YourTurn,
+            TimerTick,
+            TimerUrgent,
+
+            // Results and table events
+            Win,
+            Lose,
+            PlayerJoined,
+            GameStart,
+
+            // UI
+            ButtonClick,
+            Error,
+        }
+
+        /// <summary>One sound in the SoundLibrary: one or more clips (picked at random) and how loud.</summary>
+        [Serializable]
+        public class SoundEntry
+        {
+            public SoundId id;
+            public UnityEngine.AudioClip[] clips = new UnityEngine.AudioClip[0];
+            [UnityEngine.Range(0f, 1f)] public float volume = 1f;
+            [UnityEngine.Range(0f, 0.3f)] public float pitchJitter; // random pitch +/- this, so repeats don't sound robotic
         }
     }
 }
