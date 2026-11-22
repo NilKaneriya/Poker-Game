@@ -135,8 +135,22 @@ test('json files: data survives a restart', async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'poker-restart-'));
   const first = await createStorage({ dataDir });
   await new AccountStore().attach(first).register('dave_44', 'secret1');
+  await first.close(); // the server closes storage on shutdown, which writes pending changes
   const second = await createStorage({ dataDir }); // like a server restart
   assert.ok(await new AccountStore().attach(second).findByUsername('dave_44'));
+});
+
+test('json files: many quick changes become one file write, and nothing is lost', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'poker-batch-'));
+  const storage = await createStorage({ dataDir });
+  for (let i = 0; i < 100; i++) await storage.stats.set(`p${i}`, { handsPlayed: i });
+  assert.equal(storage.stats.writes, 0); // nothing written yet: batched
+  await storage.close();
+  assert.equal(storage.stats.writes, 1);
+  const saved = JSON.parse(fs.readFileSync(path.join(dataDir, 'stats.json'), 'utf8'));
+  assert.equal(Object.keys(saved).length, 100);
+  assert.equal(saved.p99.handsPlayed, 99);
+  assert.ok(!fs.existsSync(path.join(dataDir, 'stats.json.tmp'))); // temp file renamed into place
 });
 
 test('json files: old accounts.json is split into users and tokens once', async () => {

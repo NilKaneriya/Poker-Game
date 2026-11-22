@@ -43,13 +43,17 @@ async function createMongoStorage(uri, dbName) {
 function createJsonStorage(dataDir) {
   const file = (name) => (dataDir ? path.join(dataDir, `${name}.json`) : null);
   if (dataDir) migrateLegacyAccounts(dataDir);
-  return {
-    kind: dataDir ? 'json' : 'memory',
+  const collections = {
     users: new JsonCollection(file('users')),
     tokens: new JsonCollection(file('tokens')),
     stats: new JsonCollection(file('stats')),
     handHistory: new JsonCollection(file('handHistory')),
-    close: async () => {},
+  };
+  return {
+    kind: dataDir ? 'json' : 'memory',
+    ...collections,
+    // Writes are batched (see JsonCollection); closing writes whatever is still pending.
+    close: () => Promise.all(Object.values(collections).map((c) => c.flush())),
   };
 }
 
