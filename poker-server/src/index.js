@@ -9,6 +9,7 @@ const { createStorage } = require('./storage');
 const { store: accounts } = require('./services/AccountStore');
 const { profiles } = require('./services/ProfileService');
 const stats = require('./services/StatsService');
+const handHistory = require('./services/HandHistoryService');
 const tables = require('./services/TableManager');
 const authRoutes = require('./network/authRoutes');
 const { createProfileRoutes } = require('./network/profileRoutes');
@@ -26,6 +27,7 @@ async function main() {
   accounts.attach(storage);
   profiles.attach(storage);
   stats.attach(storage);
+  handHistory.attach(storage);
   log.info(`Player data: ${storage.kind === 'mongodb' ? `MongoDB (database "${config.storage.mongoDb}")` : `JSON files in ${config.storage.dataDir}`}`);
 
   // 2. HTTP: health, tables, login, profile, and the WebGL game.

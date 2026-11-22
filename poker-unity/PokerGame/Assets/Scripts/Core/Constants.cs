@@ -46,6 +46,7 @@ namespace Poker.Core
             public const string LeaveTable = "leaveTable";
             public const string StartGame = "startGame";
             public const string GetStats = "getStats";
+            public const string GetHandHistory = "getHandHistory";
             public const string ListTables = "listTables";
             public const string PlayerAction = "playerAction";
             public const string Rebuy = "rebuy";
@@ -55,6 +56,7 @@ namespace Poker.Core
             public const string TableList = "tableList";
             public const string TableState = "tableState";
             public const string Stats = "stats";
+            public const string HandHistory = "handHistory";
             public const string ActionRejected = "actionRejected";
             public const string Error = "errorMessage";
 
@@ -453,6 +455,65 @@ namespace Poker.Core
             public const string BiggestPot = "Biggest pot";
             public const string BestHand = "Best hand";
             public const string NoValue = "-";
+        }
+
+        /// <summary>Hand history panel (Lobby and Game).</summary>
+        public static class HistoryTexts
+        {
+            public const string Button = "Hand history";
+            public const string ButtonShort = "History";
+            public const string Title = "Hand history";
+            public const string Loading = "Loading your hands...";
+            public const string Empty = "No hands yet.\nPlay a hand and it shows up here.";
+            public const string PickHand = "Pick a hand on the left to see how it played out.";
+            public const string Offline = "Connect to see your hand history.";
+
+            // List rows
+            public const string RowTitle = "Hand #{0}  •  {1}";
+            public const string RowFolded = "Folded";
+
+            // Detail
+            public const string DetailTitle = "Hand #{0}  •  {1}";
+            public const string DetailInfo = "Blinds {0}/{1}  •  {2}  •  Pot {3}";
+            public const string Board = "BOARD";
+            public const string YourCards = "YOUR CARDS";
+            public const string NoBoard = "No board: the hand ended pre-flop";
+            public const string Showdown = "SHOWDOWN";
+            public const string Result = "RESULT";
+            public const string Today = "Today {0}";
+
+            // Your result
+            public const string YouWon = "<color=#22C55E><b>You won {0}</b></color>";
+            public const string YouLost = "<color=#E5484D><b>You lost {0}</b></color>";
+            public const string YouFolded = "<color=#94A3B8><b>You folded</b></color>";
+            public const string YouEven = "<b>You broke even</b>";
+            public const string WithHand = " with {0}";
+
+            public static string Street(string stage) => stage switch
+            {
+                "preflop" => "PRE-FLOP",
+                "flop" => "FLOP",
+                "turn" => "TURN",
+                "river" => "RIVER",
+                _ => (stage ?? "").ToUpperInvariant(),
+            };
+
+            // Actions: {0} = name, {1} = amount, {2} = total
+            public const string Sb = "{0} posts small blind {1}";
+            public const string Bb = "{0} posts big blind {1}";
+            public const string Fold = "{0} folds";
+            public const string Check = "{0} checks";
+            public const string Call = "{0} calls {1}";
+            public const string Bet = "{0} bets {2}";
+            public const string Raise = "{0} raises to {2}";
+            public const string AllIn = "{0} is all-in for {2}";
+            public const string Returned = "{1} uncalled returned to {0}";
+            public const string TimedOut = " <color=#94A3B8>(time ran out)</color>";
+            public const string Left = " <color=#94A3B8>(left the table)</color>";
+            public const string Won = "{0} wins {1}";
+            public const string WonWith = "{0} wins {1} with {2}";
+            public const string You = "<color=#F6C744><b>You</b></color>";
+            public const string Name = "<color=#7CB4FF><b>{0}</b></color>";
         }
 
         /// <summary>Messages shown at the table.</summary>

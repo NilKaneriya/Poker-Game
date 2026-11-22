@@ -38,7 +38,7 @@ namespace Poker.UI
             if (IsOpen && Input.GetKeyDown(KeyCode.Escape)) Close();
         }
 
-        private void OnDestroy() => DOTween.Kill(this);
+        protected virtual void OnDestroy() => DOTween.Kill(this);
 
         public void Open()
         {

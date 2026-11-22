@@ -169,7 +169,7 @@ namespace Poker.EditorTools
         // ---------- Pieces ----------
 
         /// <summary>Full-screen dim backdrop + centred card with a title and a close button.</summary>
-        private static RectTransform ModalShell(Transform canvas, string name, string title, float w, float h,
+        internal static RectTransform ModalShell(Transform canvas, string name, string title, float w, float h,
             out RectTransform card, out Button close, out Button backdrop, out CanvasGroup group)
         {
             var root = Node(name, canvas).Fill();
@@ -191,7 +191,7 @@ namespace Poker.EditorTools
             return root;
         }
 
-        private static void WireModal(ModalPanel panel, CanvasGroup group, RectTransform card, Button open, Button close, Button backdrop)
+        internal static void WireModal(ModalPanel panel, CanvasGroup group, RectTransform card, Button open, Button close, Button backdrop)
         {
             Wire(panel, "group", group);
             Wire(panel, "card", card);

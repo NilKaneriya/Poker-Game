@@ -141,6 +141,13 @@ class Table {
       deck,
     });
     this.handNumber++;
+    // Who was dealt in, as they were at the start (for hand histories; players may leave mid-hand).
+    this.hand.info = {
+      handNumber: this.handNumber,
+      startedAt: Date.now(),
+      buttonSeat: this.buttonSeat,
+      seats: dealtSeats.map((i) => ({ seat: i, playerId: this.seats[i].playerId, name: this.seats[i].name, isBot: !!this.seats[i].isBot })),
+    };
     this.hand.start();
     this.syncChips();
     return this.hand;

@@ -3,6 +3,7 @@ const config = require('../../config');
 const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
+const handHistory = require('../../services/HandHistoryService');
 const { tableRoom, sendTableList, sendStats } = require('../broadcast');
 const gameEvents = require('../gameEvents');
 const { GAME_EVENTS } = gameEvents;
@@ -48,6 +49,14 @@ module.exports = (io, socket) => {
 
   socket.on(EVENTS.LIST_TABLES, () => socket.emit(EVENTS.TABLE_LIST, tables.list()));
   socket.on(EVENTS.GET_STATS, () => sendStats(io, playerId));
+  socket.on(EVENTS.GET_HAND_HISTORY, async () => {
+    try {
+      socket.emit(EVENTS.HAND_HISTORY, { hands: await handHistory.list(playerId) });
+    } catch (err) {
+      log.error(`Could not load hand history for ${playerId}: ${err.message}`);
+      socket.emit(EVENTS.ERROR, { message: 'Could not load your hand history' });
+    }
+  });
 
   socket.on(EVENTS.CREATE_TABLE, (payload) => {
     const { tableName, mode, maxSeats } = payload || {};

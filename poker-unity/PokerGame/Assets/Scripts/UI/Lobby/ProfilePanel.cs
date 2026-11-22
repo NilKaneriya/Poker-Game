@@ -43,8 +43,9 @@ namespace Poker.UI.Lobby
             Profiles.ProfileChanged += OnProfileLoaded;
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (Profiles != null) Profiles.ProfileChanged -= OnProfileLoaded;
         }
 

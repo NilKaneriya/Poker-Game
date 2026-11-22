@@ -236,6 +236,20 @@ async function statsChecks(alice) {
   check(after.handsPlayed === before.handsPlayed + 1, 'hands played did not go up by one');
   check(after.handsWon >= before.handsWon, 'hands won went down');
   console.log(`Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`);
+
+  // The same hand is in Alice's hand history (saved in the background, so ask a few times).
+  let latest = null;
+  for (let attempt = 0; attempt < 10 && latest?.tableName !== 'Stats'; attempt++) {
+    const { hands } = await new Promise((resolve) => { alice.once('handHistory', resolve); alice.emit('getHandHistory'); });
+    latest = hands[0];
+    if (latest?.tableName !== 'Stats') await new Promise((r) => setTimeout(r, 100));
+  }
+  check(latest?.tableName === 'Stats', 'the hand is not in the hand history');
+  check(latest.you?.cards?.length === 2, 'hand history is missing your hole cards');
+  check(latest.streets?.[0]?.actions?.length >= 2, 'hand history is missing the blinds');
+  const hidden = latest.players.filter((p) => !p.isYou && p.cards.length > 0 && !latest.streets.some((s) => s.stage === 'river'));
+  check(hidden.length === 0, 'hand history shows cards that were never shown');
+  console.log(`Hand history: hand #${latest.handNumber}, ${latest.streets.length} street(s), you ${latest.you.net >= 0 ? '+' : ''}${latest.you.net}`);
   alice.emit('leaveTable');
 }
 

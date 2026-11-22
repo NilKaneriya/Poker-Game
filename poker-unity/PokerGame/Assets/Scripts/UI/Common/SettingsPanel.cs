@@ -51,8 +51,9 @@ namespace Poker.UI
             Show(Settings.Current);
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             if (Settings != null) Settings.Changed -= Show;
         }
 

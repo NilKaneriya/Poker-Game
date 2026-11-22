@@ -101,6 +101,8 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 | `TableManager.js` | Creates tables with unique, easy-to-read 5-letter codes (no 0/O/1/I); finds a player's table; lists **friends** tables only. |
 | `AccountStore.js` | Accounts in a JSON file. Passwords as **scrypt** hashes with salt; tokens stored only as **SHA-256**. |
 | `StatsService.js` | **Player statistics** (the one retention feature): hands played, hands won, biggest pot, best hand shown. Recorded after every hand, saved to `data/stats.json`, sent only to that player. |
+| `handRecord.js` | Turns a finished hand into a **hand-history record** as one player may see it: your hole cards always, others' only if shown at showdown; actions street by street (blinds, bet vs raise, all-in, time-outs, returned bets), board, winners, chips won/lost. Pure function. |
+| `HandHistoryService.js` | Keeps each player's last 30 records (MongoDB or JSON, collection `handHistory`). Saved after every hand in the background; sent on `getHandHistory`. |
 
 ### `src/bots/BotPlayer.js`
 Three personalities (easy / normal / hard). Each one compares **hand strength** with the **price of calling**, raises with strong hands and sometimes bluffs.
@@ -228,6 +230,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `SplashController` | Server check → auto-login or login form → connect → Lobby. |
 | `LobbyController` | Create (mode + 2-6 seats, remembered), join by code, open-tables list, **auto-join from an invite link**. |
 | `PlayerStatsView` | *Your stats* card in the lobby. |
+| `HandHistoryPanel` (UI/Common) | Hand history pop-up (Lobby stats card and "History" at the table): list of your last hands, the selected one street by street with mini cards. Text from `HandHistoryFormat`; layout from `Editor/HandHistoryUIBuilder`. |
 | `TableListItemView` | One row of the open-tables list ("Waiting for players" / "Hand in progress"). |
 
 ### UI/Game: the table
@@ -328,7 +331,7 @@ Game glue (`UI/Game/Reactions/`): `NetworkReactionTransport` adapts `NetworkMana
 Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
 
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**, **table chat (separate module)**, **emote reactions (stand-alone module)**, **profiles and settings saved in MongoDB (or JSON files)**. **102 unit tests pass**, the storage tests also pass on a real MongoDB (`npm run test:mongo`), and the **end-to-end test** passes on both backends (`npm run test:e2e`, `npm run test:e2e:mongo`).
+- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**, **table chat (separate module)**, **emote reactions (stand-alone module)**, **hand history (last 30 hands per player)**, **profiles and settings saved in MongoDB (or JSON files)**. **110 unit tests pass**, the storage tests also pass on a real MongoDB (`npm run test:mongo`), and the **end-to-end test** passes on both backends (`npm run test:e2e`, `npm run test:e2e:mongo`).
 - Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
 **Before submitting**

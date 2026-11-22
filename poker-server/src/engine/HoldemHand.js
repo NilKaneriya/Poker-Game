@@ -17,6 +17,10 @@ const CARDS_FOR_STAGE = { [STAGES.FLOP]: 3, [STAGES.TURN]: 1, [STAGES.RIVER]: 1 
  *   currentBet  the highest bet on this street (what everyone must match)
  *   minRaise    size of the last full raise; the next raise must be at least this big
  *   hasActed    acted since betting was last (re)opened by a full raise
+ *
+ * Every blind, action and returned bet is also written to `log` (for hand histories):
+ *   { stage, playerId, action, amount, total, timeout? }
+ *   amount = chips put in by this action, total = the player's bet on this street after it.
  */
 class HoldemHand {
   /**
@@ -32,6 +36,7 @@ class HoldemHand {
     this.players = players.map((p) => ({
       playerId: p.playerId,
       stack: p.stack,
+      startStack: p.stack,
       holeCards: [],
       bet: 0,
       totalBet: 0,
@@ -50,6 +55,7 @@ class HoldemHand {
     this.currentBet = 0;
     this.minRaise = bigBlind;
     this.result = null;
+    this.log = [];
   }
 
   // =====================================================================
@@ -167,6 +173,8 @@ class HoldemHand {
     }
     if (!legal.actions.includes(action)) return fail(`You can't ${action} right now`);
 
+    const stage = this.stage;
+    const before = p.totalBet;
     switch (action) {
       case ACTIONS.FOLD:
         p.folded = true;
@@ -192,6 +200,7 @@ class HoldemHand {
 
     p.lastAction = p.allIn && action !== ACTIONS.FOLD ? ACTIONS.ALL_IN : action;
     p.hasActed = true;
+    this.log.push({ stage, playerId, action: p.lastAction, amount: p.totalBet - before, total: p.bet });
     this.afterAction();
     return { ok: true };
   }
@@ -200,7 +209,11 @@ class HoldemHand {
   actOnTimeout(playerId) {
     const legal = this.getLegalActions(playerId);
     if (!legal.canAct) return fail('Not your turn');
-    return this.applyAction(playerId, legal.actions.includes(ACTIONS.CHECK) ? ACTIONS.CHECK : ACTIONS.FOLD);
+    const stage = this.stage;
+    const result = this.applyAction(playerId, legal.actions.includes(ACTIONS.CHECK) ? ACTIONS.CHECK : ACTIONS.FOLD);
+    const entry = this.log.findLast((e) => e.playerId === playerId && e.stage === stage);
+    if (result.ok && entry) entry.timeout = true;
+    return result;
   }
 
   /** Player left the table mid-hand: fold them now, even if it isn't their turn. */
@@ -209,6 +222,7 @@ class HoldemHand {
     if (!p || p.folded || this.isComplete) return;
     p.folded = true;
     p.lastAction = ACTIONS.FOLD;
+    this.log.push({ stage: this.stage, playerId, action: ACTIONS.FOLD, amount: 0, total: p.bet, left: true });
 
     if (this.activePlayers().length === 1) return this.finishByFold();
     if (p === this.currentPlayer) this.afterAction();
@@ -269,6 +283,7 @@ class HoldemHand {
   postBlind(p, amount, label) {
     this.putChips(p, amount);
     p.lastAction = label;
+    this.log.push({ stage: STAGES.PREFLOP, playerId: p.playerId, action: label, amount: p.totalBet, total: p.bet });
   }
 
   /**
@@ -304,6 +319,7 @@ class HoldemHand {
     top.bet -= excess;
     top.totalBet -= excess;
     if (top.stack > 0) top.allIn = false;
+    this.log.push({ stage: this.stage, playerId: top.playerId, action: 'returned', amount: excess, total: top.bet });
   }
 
   endBettingRound() {

@@ -78,8 +78,8 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test               # 102 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
-                       # waiting list, chat, reactions, storage, accounts, profile and settings rules
+npm test               # 110 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
+                       # waiting list, hand history, chat, reactions, storage, accounts, profile and settings rules
 npm run test:mongo     # the storage/account/profile/stats tests again on a real MongoDB
                        # (mongodb-memory-server downloads one the first time; nothing to install)
 npm run test:e2e       # starts a throwaway server and plays through the network: login, join by code,
@@ -236,6 +236,7 @@ editor tool, so the scenes are reproducible from code.
 | Optional: sound and dealing animations | Dealing, chips, street banners; music and sound effects (placeholders made in code) with on/off |
 | Extra: profile and settings in MongoDB | Lobby profile card and editor (avatar, display name, bio); Settings panel in Lobby and Game (music/sound on/off + volume, hand-strength hint, four-colour deck, chat on/off, break reminders); saved per account (`/profile` routes, tested on MongoDB) |
 | Extra: table chat (separate module) | `poker-server/src/chat/` + `Assets/Scripts/Chat/`: table-only messages, quick phrases, unread badge, hand log ("Ava won 300 with Flush"), history for late joiners, 140-char limit, rate limit, swear-word masking, names from the login (tested) |
+| Extra: hand history | Your last 30 hands, saved per player (MongoDB or JSON): list with your cards and chips won/lost; each hand street by street (board, every action, time-outs, showdown cards, winners). Others' cards only if shown at showdown. Open from the Lobby stats card or "History" at the table (`services/handRecord.js`, `HandHistoryService.js`, tested) |
 | Extra: emote reactions (stand-alone module) | `poker-server/src/reactions/` + `Assets/Scripts/Reactions/`: 12 emotes; send to everyone (pops over your seat) or throw at one player (flies across the table); open from the Emotes button, the chat window, or by clicking a player; table members only, rate limited (tested, including on a bare Socket.IO server) |
 | Optional: tests for ranking and pots | `test/handEvaluator.test.js`, `test/pots.test.js` (+ hand, table, bots, stats, e2e) |
 

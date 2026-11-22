@@ -4,7 +4,7 @@ const JsonCollection = require('./JsonCollection');
 const MongoCollection = require('./MongoCollection');
 
 /**
- * Where player data lives: users (account + profile + settings), login tokens and stats.
+ * Where player data lives: users (account + profile + settings), login tokens, stats and hand histories.
  *
  *   MONGODB_URI set  -> MongoDB (production; survives redeploys)
  *   not set          -> JSON files in DATA_DIR (runs anywhere with nothing to install)
@@ -35,6 +35,7 @@ async function createMongoStorage(uri, dbName) {
     users: new MongoCollection(db.collection('users')),
     tokens: new MongoCollection(db.collection('tokens')),
     stats: new MongoCollection(db.collection('stats')),
+    handHistory: new MongoCollection(db.collection('handHistory')),
     close: () => client.close(),
   };
 }
@@ -47,6 +48,7 @@ function createJsonStorage(dataDir) {
     users: new JsonCollection(file('users')),
     tokens: new JsonCollection(file('tokens')),
     stats: new JsonCollection(file('stats')),
+    handHistory: new JsonCollection(file('handHistory')),
     close: async () => {},
   };
 }

@@ -520,6 +520,7 @@ namespace Poker.EditorTools
             Wire(statsView, "handsWonText", statValues[1]);
             Wire(statsView, "biggestPotText", statValues[2]);
             Wire(statsView, "bestHandText", statValues[3]);
+            var lobbyHistoryButton = HandHistoryUIBuilder.BuildOpenButton(statsCard.transform, HistoryTexts.Button, new Vector2(1f, 1f), -16, -14, 190, 44, 20);
 
             // Footer: break reminder switch + free-to-play note
             BuildSettingToggle(canvas, SettingToggleButton.Setting.BreakReminders, new Vector2(0f, 0f), 28, 22, 300, 46);
@@ -542,6 +543,7 @@ namespace Poker.EditorTools
             BuildBreakReminder(canvas);
             ProfileUIBuilder.BuildProfilePanel(canvas, profileCard, toast);
             ProfileUIBuilder.BuildSettingsPanel(canvas, lobbySettings);
+            HandHistoryUIBuilder.BuildPanel(canvas, lobbyHistoryButton);
             toast.transform.SetAsLastSibling(); // "Profile saved" shows above the panels
 
             AddSceneMusic(SoundId.MusicLobby);
@@ -671,6 +673,7 @@ namespace Poker.EditorTools
             var banner = BuildLostBanner(canvas, 0, GameTexts.ConnectionLost);
             BuildConnectionStatus(canvas, new Vector2(1f, 1f), -196, -35, banner);
             var gameSettings = ProfileUIBuilder.BuildSettingsButton(canvas, new Vector2(1f, 1f), -28, -98);
+            var gameHistoryButton = HandHistoryUIBuilder.BuildOpenButton(canvas, HistoryTexts.ButtonShort, new Vector2(1f, 1f), -220, -98, 180, 50, 22);
 
             var actionBar = BuildActionBar(canvas);
             var toast = BuildToast(canvas, new Vector2(0.5f, 1f), -12);
@@ -685,6 +688,7 @@ namespace Poker.EditorTools
             var chatEmoteButton = ReactionUIBuilder.BuildIconButton(chatToolSlot, emoteSet); // emotes from inside the chat window
             var rankings = BuildHandRankingsPanel(canvas);
             ProfileUIBuilder.BuildSettingsPanel(canvas, gameSettings);
+            HandHistoryUIBuilder.BuildPanel(canvas, gameHistoryButton);
             var emotePicker = ReactionUIBuilder.BuildPicker(canvas, emoteSet); // on top of everything
 
             AddSceneMusic(SoundId.MusicTable);

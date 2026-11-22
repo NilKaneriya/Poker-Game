@@ -6,6 +6,7 @@ module.exports = Object.freeze({
   LEAVE_TABLE: 'leaveTable',
   START_GAME: 'startGame', //     host only: start a friends table before every seat is filled
   GET_STATS: 'getStats', //       your own statistics (answered with STATS)
+  GET_HAND_HISTORY: 'getHandHistory', // your last hands (answered with HAND_HISTORY)
   LIST_TABLES: 'listTables',
   PLAYER_ACTION: 'playerAction', // { action, amount? }  amount = total bet to raise to
   REBUY: 'rebuy', //               out of chips: restart with the starting stack
@@ -14,6 +15,7 @@ module.exports = Object.freeze({
   SESSION: 'session', //           { playerId, username, tableCode }  sent after the login token is accepted;
   //                               tableCode = the table you are seated at, null if none (e.g. after a server restart)
   STATS: 'stats', //               { handsPlayed, handsWon, biggestPot, bestHand, bestHandRank }
+  HAND_HISTORY: 'handHistory', //  { hands: [...] }  newest first, as you saw them (services/handRecord.js)
   TABLE_LIST: 'tableList',
   TABLE_STATE: 'tableState', //    public table snapshot (+ your own cards once hands run)
   ACTION_REJECTED: 'actionRejected', // { reason }

@@ -5,6 +5,7 @@ const { sendTableState, sendTableList, sendStats } = require('./broadcast');
 const gameEvents = require('./gameEvents');
 const { GAME_EVENTS } = gameEvents;
 const stats = require('../services/StatsService');
+const history = require('../services/HandHistoryService');
 const { buildPlayerView } = require('./playerView');
 const { BotPlayer, LEVELS } = require('../bots/BotPlayer');
 
@@ -99,6 +100,7 @@ class TableRunner {
     log.info(`Table ${this.table.code}: hand #${this.table.handNumber} won by ${names.join(', ')}`);
     this.publishResult(result);
     this.recordStats(result);
+    this.recordHistory();
     this.update();
     sendTableList(this.io);
   }
@@ -124,6 +126,14 @@ class TableRunner {
     stats.recordHand(humans, result)
       .then(() => humans.forEach((playerId) => sendStats(this.io, playerId)))
       .catch((err) => log.error(`Table ${this.table.code}: could not save stats: ${err.message}`));
+  }
+
+  /** Save the hand that just ended to the hand history of every human dealt in (in the background). */
+  recordHistory() {
+    const hand = this.table.lastHand;
+    const humans = hand.players.map((p) => p.playerId).filter((id) => !this.bots.has(id));
+    history.recordHand(this.table, hand, humans)
+      .catch((err) => log.error(`Table ${this.table.code}: could not save hand history: ${err.message}`));
   }
 
   /** A human's action from the socket. Returns the engine's { ok, error }. */

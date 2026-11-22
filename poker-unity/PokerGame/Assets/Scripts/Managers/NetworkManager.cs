@@ -29,6 +29,7 @@ namespace Poker.Network
         public event Action<string> ActionRejected;
         public event Action<string> ServerErrorReceived;
         public event Action<PlayerStats> StatsReceived;
+        public event Action<HandHistoryList> HandHistoryReceived;
         /// <summary>We were at a table, but the server says we aren't any more (e.g. it restarted).</summary>
         public event Action TableLost;
 
@@ -82,6 +83,8 @@ namespace Poker.Network
         public void RequestTableList() => Emit(PokerEvents.ListTables);
 
         public void RequestStats() => Emit(PokerEvents.GetStats);
+
+        public void RequestHandHistory() => Emit(PokerEvents.GetHandHistory);
 
         public void CreateTable(string tableName, string mode, int maxSeats) =>
             Emit(PokerEvents.CreateTable, new CreateTableRequest { tableName = tableName, mode = mode, maxSeats = maxSeats });
@@ -155,6 +158,7 @@ namespace Poker.Network
                 if (lostTable) TableLost?.Invoke();
             });
             On<PlayerStats>(PokerEvents.Stats, stats => StatsReceived?.Invoke(stats));
+            On<HandHistoryList>(PokerEvents.HandHistory, list => HandHistoryReceived?.Invoke(list));
             On<List<TableSummary>>(PokerEvents.TableList, list => TableListReceived?.Invoke(list));
             On<TableState>(PokerEvents.TableState, table =>
             {

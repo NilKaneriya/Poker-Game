@@ -104,6 +104,88 @@ namespace Poker.Network
             public int bestHandRank = -1;
         }
 
+        // ---------- Hand history (server: services/handRecord.js) ----------
+
+        [Serializable]
+        public class HandHistoryList
+        {
+            public List<HandRecord> hands = new List<HandRecord>(); // newest first
+        }
+
+        /// <summary>One finished hand as you saw it: others' cards only if shown at showdown.</summary>
+        [Serializable]
+        public class HandRecord
+        {
+            public string id;
+            public string tableCode;
+            public string tableName;
+            public int handNumber;
+            public long startedAt;        // Unix ms
+            public int smallBlind;
+            public int bigBlind;
+            public List<string> board = new List<string>();
+            public int pot;
+            public HandRecordYou you;
+            public List<HandRecordPlayer> players = new List<HandRecordPlayer>();
+            public List<HandStreet> streets = new List<HandStreet>();
+            public List<HandWinner> winners = new List<HandWinner>();
+        }
+
+        [Serializable]
+        public class HandRecordYou
+        {
+            public List<string> cards = new List<string>();
+            public int net;               // chips won (+) or lost (-) in this hand
+            public bool folded;
+            public string handName;
+        }
+
+        [Serializable]
+        public class HandRecordPlayer
+        {
+            public string playerId;
+            public string name;
+            public int seat;
+            public bool isBot;
+            public bool isButton;
+            public bool isYou;
+            public int startChips;
+            public int endChips;
+            public int net;
+            public bool folded;
+            public List<string> cards = new List<string>(); // empty = not shown
+            public string handName;
+        }
+
+        [Serializable]
+        public class HandStreet
+        {
+            public string stage;          // preflop, flop, turn, river
+            public List<string> cards = new List<string>(); // board cards dealt on this street
+            public List<HandAction> actions = new List<HandAction>();
+        }
+
+        [Serializable]
+        public class HandAction
+        {
+            public string playerId;
+            public string name;
+            public string kind;           // sb, bb, fold, check, call, bet, raise, allIn, returned
+            public int amount;            // chips put in by this action (or returned)
+            public int total;             // the player's bet on this street after it
+            public bool timeout;
+            public bool left;
+        }
+
+        [Serializable]
+        public class HandWinner
+        {
+            public string playerId;
+            public string name;
+            public int amount;
+            public string handName;
+        }
+
         [Serializable]
         public class TableSummary
         {
