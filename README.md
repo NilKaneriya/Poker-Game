@@ -95,6 +95,33 @@ Every push and pull request runs all of these on GitHub Actions (`.github/workfl
 lint, unit tests, MongoDB storage tests and both end-to-end runs. `npm run lint` checks the
 server with ESLint and Prettier.
 
+### Load test
+
+`npm run load-test` (in `poker-server/`) starts a throwaway server, connects one player per
+bots table, plays fast hands for a while and reports what the server saw through
+`GET /metrics` (tables, players, hands per minute, event-loop delay, memory). Options:
+`-- --tables=200 --seconds=120`, or `-- --url=...` for a running server.
+
+Result on a laptop (Windows, Node 24, JSON storage), 200 tables x 6 seats = 200 players +
+1,000 bots, bots acting every ~0.2 s (about 10x faster than real play):
+
+| | Before the fix | After |
+|---|---|---|
+| Hands per minute | 1,466 | **2,508** |
+| Your action answered (p50 / p95 / p99) | 33 / 346 / 545 ms | **6 / 19 / 34 ms** |
+| Worst event-loop delay (p99) | 695 ms | **64 ms** |
+| Errors / rejected actions | 0 / 0 | 0 / 0 |
+
+What the load test found, and what was fixed:
+- **JSON storage blocked the server.** Every save rewrote the whole file synchronously
+  (several MB of hand histories, ~24 times a second). Saves are now batched: at most one
+  background write per second per file (temp file + rename), and pending changes are
+  written on shutdown.
+- **Lost updates** (found by the end-to-end run on MongoDB right after): stats and hand
+  history read a player's document, change it and write it back; two hands of one player
+  finishing together could overwrite each other. Saves now run one at a time per player
+  (`utils/KeyedQueue.js`); a test with a deliberately slow database proves it.
+
 ---
 
 ## 2. How to test multiplayer with two or more players

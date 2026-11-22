@@ -87,7 +87,7 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 | `sockets/` | Socket.IO: login handshake, event handlers, sending state | `game/`, `services/`, `engine/constants.js` |
 | `http/` | Express routes and WebGL hosting | `services/` |
 | `services/` | Accounts, profiles, stats, hand history, table list | `engine/`, `storage/` |
-| `storage/` | MongoDB / JSON collections behind one API | nothing |
+| `storage/` | MongoDB / JSON collections behind one API (JSON writes are batched, at most once a second) | nothing |
 | `chat/`, `reactions/` | Stand-alone feature modules | only their own folder (tests enforce it) |
 
 Every folder may use `config.js` and `utils/`. File names: a file that exports a class is `PascalCase.js`; a file that exports functions is `camelCase.js`. Services export one shared instance plus the class (for tests). Style is checked by ESLint and formatting by Prettier (`npm run lint`).
@@ -118,6 +118,7 @@ Every folder may use `config.js` and `utils/`. File names: a file that exports a
 | `webglHosting.js` | Serves a Unity WebGL build from the server (one address for game and server). |
 | `authRoutes.js` | Register, login, `/auth/me`, logout; simple rate limit against brute force. |
 | `profileRoutes.js` | `GET /profile/me`, `PUT /profile`, `PUT /profile/settings` (login token required). |
+| `metricsRoutes.js` | `GET /metrics`: tables, players, sockets, hands per minute, event-loop delay, memory (no private data). Used by `scripts/load-test.js`. |
 
 ### `src/services/`
 | File | Responsibility |
