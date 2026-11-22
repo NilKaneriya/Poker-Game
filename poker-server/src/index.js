@@ -13,6 +13,7 @@ const handHistory = require('./services/HandHistoryService');
 const tables = require('./services/TableManager');
 const authRoutes = require('./http/authRoutes');
 const { createProfileRoutes } = require('./http/profileRoutes');
+const { createMetricsRoutes } = require('./http/metricsRoutes');
 const { syncProfile } = require('./sockets/profileSync');
 const registerSocketServer = require('./sockets/socketServer');
 const { serveWebGL } = require('./http/webglHosting');
@@ -42,6 +43,7 @@ async function main() {
 
   app.get('/health', (req, res) => res.json({ status: 'ok' }));
   app.get('/tables', (req, res) => res.json(tables.list()));
+  app.use('/metrics', createMetricsRoutes({ io, tables, gameEvents }));
   app.use('/auth', authRoutes);
   app.use('/profile', createProfileRoutes({ onProfileChanged: (profile) => syncProfile(io, profile) }));
   const servingGame = serveWebGL(app, config.webglDir);

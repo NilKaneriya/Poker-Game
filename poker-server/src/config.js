@@ -17,6 +17,7 @@ module.exports = {
   },
 
   turnTimeoutMs: num(process.env.TURN_TIMEOUT_MS, 30000),
+  authRateMax: num(process.env.AUTH_RATE_MAX, 10), // login/register attempts per IP per minute
   timing: {
     nextHandDelayMs: num(process.env.NEXT_HAND_DELAY_MS, 2500), // pause before dealing the next hand
     resultShowMs: num(process.env.RESULT_SHOW_MS, 5000), //       how long the winner screen stays

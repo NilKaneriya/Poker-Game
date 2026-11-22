@@ -1,11 +1,13 @@
 const express = require('express');
+const config = require('../config');
 const { store, toPublicUser } = require('../services/AccountStore');
 
 const router = express.Router();
 
 // Very small brute-force guard: max attempts per IP per minute on login/register.
+// (AUTH_RATE_MAX raises it for load tests, where every client comes from one machine.)
 const WINDOW_MS = 60_000;
-const MAX_ATTEMPTS = 10;
+const MAX_ATTEMPTS = config.authRateMax;
 const attempts = new Map(); // ip -> { count, resetAt }
 
 function rateLimit(req, res, next) {

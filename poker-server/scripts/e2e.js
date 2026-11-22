@@ -35,7 +35,7 @@ async function startServer() {
       MONGODB_DB: 'poker_e2e',
       WEBGL_DIR: '',
     },
-    stdio: ['ignore', 'ignore', 'inherit'],
+    stdio: ['ignore', process.env.E2E_SERVER_LOG ? 'inherit' : 'ignore', 'inherit'],
   });
 }
 

@@ -14,7 +14,8 @@
     "test:mongo": "node scripts/test-mongo.js",
     "test:e2e:mongo": "node scripts/e2e.js --mongo",
     "lint": "eslint . && prettier --check .",
-    "lint:fix": "eslint . --fix && prettier --write ."
+    "lint:fix": "eslint . --fix && prettier --write .",
+    "load-test": "node scripts/load-test.js"
   },
   "engines": {
     "node": ">=18"
