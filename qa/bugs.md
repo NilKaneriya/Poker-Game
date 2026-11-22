@@ -6,6 +6,7 @@ visible to players, **Low** = cosmetic or internal.
 
 | ID | Title | Severity | Found by | Status |
 |---|---|---|---|---|
+| [BUG-09](#bug-09) | End-to-end test crashed in cleanup on Linux after passing | Low (test) | First CI run (GitHub Actions) | Fixed |
 | [BUG-08](#bug-08) | Stats and hand history lost updates when two hands ended together | High | End-to-end test on MongoDB | Fixed |
 | [BUG-07](#bug-07) | JSON storage blocked the server for up to 0.7 s under load | Medium | Load test | Fixed |
 | [BUG-06](#bug-06) | End-to-end stats check could read the wrong hand | Low (test) | End-to-end test on MongoDB | Fixed |
@@ -16,6 +17,17 @@ visible to players, **Low** = cosmetic or internal.
 | [BUG-01](#bug-01) | Express error handler would be ignored if its unused argument was removed | Low | ESLint | Kept, documented |
 
 ---
+
+### BUG-09
+**End-to-end test crashed in cleanup on Linux after passing** (Low, test only)
+- **Found by:** the first GitHub Actions run. Every check printed OK, then the job failed
+  with `ENOTEMPTY: directory not empty, rmdir '/tmp/poker-e2e-...'`.
+- **Cause:** on Linux `kill()` sends SIGTERM, so the test server shuts down cleanly and
+  writes its pending JSON data (batched writes, BUG-07), while `e2e.js` was already
+  deleting that folder. Windows ends the process at once, so it never showed locally.
+- **Fix:** `e2e.js` waits for the server to exit (SIGKILL after 5 s if stuck); removing
+  the temp folder retries and only warns. Commit `7ff0c38`. CI run after the fix: all
+  three jobs green.
 
 ### BUG-08
 **Stats and hand history lost updates when two hands ended together** (High)

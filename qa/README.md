@@ -22,6 +22,7 @@ qa/
 | **Unit tests** (115) | Poker rules: hand ranking, side pots, pot splits, betting rules, timeouts; table and waiting list; bots; stats; hand history records (hidden cards stay hidden); chat; reactions; profile rules; storage on memory, JSON files and MongoDB; concurrent saves | `poker-server/test/` | yes |
 | **End-to-end** | A real server and real Socket.IO clients: login, tables, join by code, waiting room, hands, rejected cheating, chat, profile, stats, hand history, disconnect and reconnect | `poker-server/scripts/test-client.js` via `npm run test:e2e` (JSON) and `test:e2e:mongo` | yes |
 | **Lint** | ESLint (real mistakes) + Prettier (formatting) | `poker-server/eslint.config.js` | yes |
+| **CI** | Lint, unit, MongoDB and both end-to-end runs on Linux, on every push and PR | `.github/workflows/server.yml` | - |
 | **Load test** | 200 tables, 1,200 players and bots at ~10x real speed: latency, throughput, event-loop delay, memory | [`load-test/load-test.js`](load-test/load-test.js) | no (run before a release) |
 | **Manual** | The Unity client, multiplayer on real devices, animations, sound, layout | [`manual/test-plan.md`](manual/test-plan.md) | no |
 
@@ -57,8 +58,8 @@ server shows tables, players, hands per minute, event-loop delay and memory.
 
 ## What testing found
 
-8 defects so far, all fixed; the two biggest came from the load test and the MongoDB
-end-to-end run, not from reading code. Details in [bugs.md](bugs.md).
+9 defects so far, all fixed; the biggest came from the load test, the MongoDB end-to-end
+run and the first CI run on Linux, not from reading code. Details in [bugs.md](bugs.md).
 
 - **Lost updates** (High): two hands of one player ending together could erase each
   other's stats / history. Fixed with a per-player save queue; proven by a test with a
