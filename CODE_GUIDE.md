@@ -118,7 +118,7 @@ Every folder may use `config.js` and `utils/`. File names: a file that exports a
 | `webglHosting.js` | Serves a Unity WebGL build from the server (one address for game and server). |
 | `authRoutes.js` | Register, login, `/auth/me`, logout; simple rate limit against brute force. |
 | `profileRoutes.js` | `GET /profile/me`, `PUT /profile`, `PUT /profile/settings` (login token required). |
-| `metricsRoutes.js` | `GET /metrics`: tables, players, sockets, hands per minute, event-loop delay, memory (no private data). Used by `scripts/load-test.js`. |
+| `metricsRoutes.js` | `GET /metrics`: tables, players, sockets, hands per minute, event-loop delay, memory (no private data). Used by the load test (`qa/load-test/load-test.js`). |
 
 ### `src/services/`
 | File | Responsibility |

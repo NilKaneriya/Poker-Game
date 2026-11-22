@@ -1,0 +1,17 @@
+{
+  "name": "poker-qa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "QA tools for the poker game: load test and a runner that saves test reports",
+  "scripts": {
+    "load-test": "node load-test/load-test.js",
+    "test:all": "node scripts/run-all.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "socket.io-client": "^4.8.4"
+  }
+}

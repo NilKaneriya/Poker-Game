@@ -2,10 +2,11 @@
 // Starts a throwaway server (own port and data folder) unless --url is given, plays for a
 // while, then reports how fast the server answered and what /metrics saw.
 //
-// Usage: npm run load-test                      (50 tables of 6 = 50 humans + 250 bots, 60 s)
-//        npm run load-test -- --tables=200 --seconds=120
-//        npm run load-test -- --url=http://localhost:3000   (against a running server; it
-//                                                            needs AUTH_RATE_MAX raised)
+// Run from qa/ (npm install once):
+//   npm run load-test                                 50 tables of 6 = 50 humans + 250 bots, 60 s
+//   npm run load-test -- --tables=200 --seconds=120
+//   npm run load-test -- --report                     also save qa/reports/load-test/<date>-<tables>t.md
+//   npm run load-test -- --url=http://localhost:3000  against a running server (needs AUTH_RATE_MAX raised)
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
@@ -24,6 +25,18 @@ const SEATS = Number(args.seats || 6);
 const PORT = 3200;
 const URL = args.url || `http://localhost:${PORT}`;
 const RUN_ID = Date.now().toString(36).slice(-5);
+const SERVER_ENTRY = path.join(__dirname, '..', '..', 'poker-server', 'src', 'index.js');
+const REPORT_DIR = path.join(__dirname, '..', 'reports', 'load-test');
+
+// Fast timings for the throwaway server: bots act ~10x faster than in real play.
+const SERVER_TIMINGS = { BOT_THINK_MS: '150', NEXT_HAND_DELAY_MS: '300', RESULT_SHOW_MS: '300' };
+
+// Everything printed is also kept for the report.
+const output = [];
+const say = (line = '') => {
+  console.log(line);
+  output.push(line);
+};
 
 const stats = { actions: 0, rejected: 0, errors: 0, rebuys: 0, latencies: [] };
 let server = null;
@@ -32,16 +45,14 @@ let server = null;
 
 async function startServer() {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'poker-load-'));
-  server = spawn(process.execPath, [path.join(__dirname, '..', 'src', 'index.js')], {
+  server = spawn(process.execPath, [SERVER_ENTRY], {
     env: {
       ...process.env,
       PORT: String(PORT),
       DATA_DIR: dataDir,
       MONGODB_URI: '', // JSON files in a temp folder: never touches real player data
       AUTH_RATE_MAX: '1000000',
-      BOT_THINK_MS: '150', //       bots act quickly so the server works harder than in real play
-      NEXT_HAND_DELAY_MS: '300',
-      RESULT_SHOW_MS: '300',
+      ...SERVER_TIMINGS,
     },
     stdio: ['ignore', 'ignore', 'inherit'],
   });
@@ -136,7 +147,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
   if (!args.url) await startServer();
-  console.log(`Load test: ${TABLES} tables x ${SEATS} seats (${TABLES} humans, ${TABLES * (SEATS - 1)} bots) for ${SECONDS} s`);
+  say(`Load test: ${TABLES} tables x ${SEATS} seats (${TABLES} humans, ${TABLES * (SEATS - 1)} bots) for ${SECONDS} s`);
 
   const startedAt = Date.now();
   const sockets = [];
@@ -145,7 +156,7 @@ async function main() {
     const batch = Array.from({ length: Math.min(20, TABLES - i) }, (_, k) => startPlayer(i + k));
     sockets.push(...(await Promise.all(batch)));
   }
-  console.log(`All ${sockets.length} players connected in ${((Date.now() - startedAt) / 1000).toFixed(1)} s\n`);
+  say(`All ${sockets.length} players connected in ${((Date.now() - startedAt) / 1000).toFixed(1)} s\n`);
 
   const before = await metrics();
   let after = before;
@@ -157,7 +168,7 @@ async function main() {
     after = m;
     worstLoopP99 = Math.max(worstLoopP99, m.eventLoopDelayMs.p99);
     worstLoopMax = Math.max(worstLoopMax, m.eventLoopDelayMs.max);
-    console.log(
+    say(
       `${String(t).padStart(4)} s  tables ${m.tables}  sockets ${m.sockets}  hands/min ${m.hands.lastMinute}  ` +
         `loop delay p99 ${m.eventLoopDelayMs.p99} ms  memory ${m.memoryMb.rss} MB`,
     );
@@ -166,17 +177,68 @@ async function main() {
 
   const sorted = stats.latencies.slice().sort((a, b) => a - b);
   const hands = after.hands.finished - before.hands.finished;
-  console.log('\n----- Result -----');
-  console.log(`Tables / players / bots : ${after.tables} / ${after.players.humans} / ${after.players.bots}`);
-  console.log(`Hands finished          : ${hands} (${Math.round((hands / SECONDS) * 60)} per minute)`);
-  console.log(`Your actions sent       : ${stats.actions} (rejected ${stats.rejected}, rebuys ${stats.rebuys})`);
-  console.log(
+  say('\n----- Result -----');
+  say(`Tables / players / bots : ${after.tables} / ${after.players.humans} / ${after.players.bots}`);
+  say(`Hands finished          : ${hands} (${Math.round((hands / SECONDS) * 60)} per minute)`);
+  say(`Your actions sent       : ${stats.actions} (rejected ${stats.rejected}, rebuys ${stats.rebuys})`);
+  say(
     `Action -> new state     : p50 ${fmt(percentile(sorted, 50))}  p95 ${fmt(percentile(sorted, 95))}  ` +
       `p99 ${fmt(percentile(sorted, 99))}  max ${fmt(sorted[sorted.length - 1] || 0)}`,
   );
-  console.log(`Server event-loop delay : worst p99 ${worstLoopP99} ms, worst max ${worstLoopMax} ms (per 10 s window)`);
-  console.log(`Server memory           : ${after.memoryMb.rss} MB`);
-  console.log(`Connection errors       : ${stats.errors}`);
+  say(`Server event-loop delay : worst p99 ${worstLoopP99} ms, worst max ${worstLoopMax} ms (per 10 s window)`);
+  say(`Server memory           : ${after.memoryMb.rss} MB`);
+  say(`Connection errors       : ${stats.errors}`);
+
+  if (args.report) writeReport({ hands, sorted, after, worstLoopP99, worstLoopMax });
+}
+
+/** Saves the run as Markdown in qa/reports/load-test/. */
+function writeReport({ hands, sorted, after, worstLoopP99, worstLoopMax }) {
+  const date = new Date().toLocaleDateString('sv'); // local YYYY-MM-DD
+  const file = path.join(REPORT_DIR, `${date}-${TABLES}t-${SECONDS}s.md`);
+  const cpu = os.cpus()[0]?.model?.trim() || 'unknown CPU';
+  const ms = (v) => `${v.toFixed(1)} ms`;
+  const text = `# Load test: ${TABLES} tables, ${SECONDS} s (${date})
+
+Generated by \`qa/load-test/load-test.js --report\`.
+
+## Setup
+| | |
+|---|---|
+| Server | ${args.url ? args.url : 'throwaway server started by the test (JSON storage in a temp folder)'} |
+| Tables | ${TABLES} bots tables x ${SEATS} seats = ${TABLES} players + ${TABLES * (SEATS - 1)} bots |
+| Duration | ${SECONDS} s of play after everyone joined |
+| Timings | ${args.url ? 'the running server\'s own' : Object.entries(SERVER_TIMINGS).map(([k, v]) => `${k}=${v}`).join(', ')} |
+| Machine | ${os.type()} ${os.release()}, ${cpu}, ${os.cpus().length} threads, ${Math.round(os.totalmem() / 1073741824)} GB RAM |
+| Node | ${process.version} |
+
+## Result
+| Metric | Value |
+|---|---|
+| Hands finished | ${hands} (${Math.round((hands / SECONDS) * 60)} per minute) |
+| Player actions sent | ${stats.actions} (rejected ${stats.rejected}, rebuys ${stats.rebuys}) |
+| Action -> new state p50 | ${ms(percentile(sorted, 50))} |
+| Action -> new state p95 | ${ms(percentile(sorted, 95))} |
+| Action -> new state p99 | ${ms(percentile(sorted, 99))} |
+| Action -> new state max | ${ms(sorted[sorted.length - 1] || 0)} |
+| Event-loop delay, worst p99 / max (10 s windows) | ${worstLoopP99} / ${worstLoopMax} ms |
+| Server memory (RSS) at the end | ${after.memoryMb.rss} MB |
+| Connection errors | ${stats.errors} |
+
+Note: on Windows the event-loop delay has a floor of about 15-25 ms even when idle (the OS
+timer resolution), so only values well above that point to real blocking.
+
+Memory grows during a run because the JSON backend keeps every player's last 30 hands of
+history in memory; it stops growing once every player has 30.
+
+## Console output
+\`\`\`
+${output.join('\n')}
+\`\`\`
+`;
+  fs.mkdirSync(REPORT_DIR, { recursive: true });
+  fs.writeFileSync(file, text);
+  console.log(`\nReport saved: ${path.relative(path.join(__dirname, '..', '..'), file)}`);
 }
 
 main()
