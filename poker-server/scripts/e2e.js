@@ -40,10 +40,32 @@ async function startServer() {
 }
 
 async function finish(code) {
-  server?.kill();
+  await stopServer();
   if (mongo) await mongo.stop();
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  // Cleaning up the temp folder must never turn a passing run into a failure.
+  try {
+    fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+  } catch (err) {
+    console.warn(`Could not remove ${dataDir}: ${err.message}`);
+  }
   process.exit(code);
+}
+
+/**
+ * Stop the server and wait until it has exited. On Linux/macOS kill() sends SIGTERM and the
+ * server shuts down cleanly, which writes pending JSON data; deleting its folder before it
+ * exits raced with that write (ENOTEMPTY in CI). Windows ends the process at once.
+ */
+function stopServer() {
+  if (!server || server.exitCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    const force = setTimeout(() => server.kill('SIGKILL'), 5000); // stuck: stop it hard
+    server.once('exit', () => {
+      clearTimeout(force);
+      resolve();
+    });
+    server.kill();
+  });
 }
 
 async function waitForServer() {
