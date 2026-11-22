@@ -30,7 +30,12 @@ function defaultAvatarFor(id) {
   return h % AVATAR_COUNT;
 }
 
-const tidy = (text) => text.normalize('NFC').replace(/[\p{Cc}\p{Cf}]/gu, ' ').replace(/\s+/g, ' ').trim();
+const tidy = (text) =>
+  text
+    .normalize('NFC')
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /**
  * Check a profile edit. Only fields that are present are checked and returned.

@@ -12,13 +12,16 @@ const timers = new Map(); // playerId -> timeout
 
 function startGrace(io, playerId, name) {
   cancelGrace(playerId);
-  timers.set(playerId, setTimeout(() => {
-    timers.delete(playerId);
-    const table = tables.findByPlayer(playerId);
-    if (!table || table.isConnected(playerId)) return; // already back
-    log.info(`${name} did not reconnect within ${config.reconnectGraceMs / 1000}s; freeing their seat`);
-    removeFromTable(io, playerId, name);
-  }, config.reconnectGraceMs));
+  timers.set(
+    playerId,
+    setTimeout(() => {
+      timers.delete(playerId);
+      const table = tables.findByPlayer(playerId);
+      if (!table || table.isConnected(playerId)) return; // already back
+      log.info(`${name} did not reconnect within ${config.reconnectGraceMs / 1000}s; freeing their seat`);
+      removeFromTable(io, playerId, name);
+    }, config.reconnectGraceMs),
+  );
 }
 
 function cancelGrace(playerId) {

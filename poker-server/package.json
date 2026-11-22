@@ -12,7 +12,9 @@
     "test": "node --test \"test/**/*.test.js\"",
     "play:bots": "node scripts/play-vs-bots.js",
     "test:mongo": "node scripts/test-mongo.js",
-    "test:e2e:mongo": "node scripts/e2e.js --mongo"
+    "test:e2e:mongo": "node scripts/e2e.js --mongo",
+    "lint": "eslint . && prettier --check .",
+    "lint:fix": "eslint . --fix && prettier --write ."
   },
   "engines": {
     "node": ">=18"
@@ -26,7 +28,12 @@
     "socket.io": "^4.8.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^9.1.2",
+    "globals": "^15.15.0",
     "mongodb-memory-server": "^10.4.3",
+    "prettier": "^3.10.1",
     "socket.io-client": "^4.8.4"
   }
 }

@@ -29,8 +29,16 @@ test('recognises every hand rank', () => {
 
 test('ranks are ordered from royal flush down to high card', () => {
   const ladder = [
-    'Ah Kh Qh Jh Th', '9s 8s 7s 6s 5s', 'Qc Qd Qh Qs 2d', 'Kc Kd Kh 7s 7d', 'Ad 9d 7d 4d 2d',
-    '9c 8d 7h 6s 5c', '7c 7d 7h Ks 2d', 'Jc Jd 4h 4s Ad', 'Tc Td 8h 4s 2d', 'Ac Jd 8h 4s 2d',
+    'Ah Kh Qh Jh Th',
+    '9s 8s 7s 6s 5s',
+    'Qc Qd Qh Qs 2d',
+    'Kc Kd Kh 7s 7d',
+    'Ad 9d 7d 4d 2d',
+    '9c 8d 7h 6s 5c',
+    '7c 7d 7h Ks 2d',
+    'Jc Jd 4h 4s Ad',
+    'Tc Td 8h 4s 2d',
+    'Ac Jd 8h 4s 2d',
   ];
   for (let i = 0; i < ladder.length - 1; i++) assert.ok(beats(ladder[i], ladder[i + 1]), `${ladder[i]} > ${ladder[i + 1]}`);
 });
@@ -49,12 +57,12 @@ test('K-A-2-3-4 is not a straight', () => {
 });
 
 test('kickers decide between equal ranks', () => {
-  assert.ok(beats('Ac Ad Kh 7s 2d', 'As Ah Qh 7d 2c'));          // pair of aces, K kicker beats Q
-  assert.ok(beats('Jc Jd 4h 4s Ad', 'Jh Js 4c 4d Kd'));          // two pair, A kicker
-  assert.ok(beats('Kc Kd 5h 5s 2d', 'Qc Qd Jh Js Ad'));          // higher top pair wins
-  assert.ok(beats('Ad 9d 7d 4d 3d', 'Ac 9c 7c 4c 2c'));          // flush decided by 5th card
-  assert.ok(beats('8c 8d 8h 2s 2d', '7c 7d 7h As Ad'));          // full house: trips first
-  assert.ok(beats('Qc Qd Qh Qs 3d', 'Qc Qd Qh Qs 2d'));          // quads kicker
+  assert.ok(beats('Ac Ad Kh 7s 2d', 'As Ah Qh 7d 2c')); // pair of aces, K kicker beats Q
+  assert.ok(beats('Jc Jd 4h 4s Ad', 'Jh Js 4c 4d Kd')); // two pair, A kicker
+  assert.ok(beats('Kc Kd 5h 5s 2d', 'Qc Qd Jh Js Ad')); // higher top pair wins
+  assert.ok(beats('Ad 9d 7d 4d 3d', 'Ac 9c 7c 4c 2c')); // flush decided by 5th card
+  assert.ok(beats('8c 8d 8h 2s 2d', '7c 7d 7h As Ad')); // full house: trips first
+  assert.ok(beats('Qc Qd Qh Qs 3d', 'Qc Qd Qh Qs 2d')); // quads kicker
 });
 
 test('identical strength ties regardless of suits', () => {

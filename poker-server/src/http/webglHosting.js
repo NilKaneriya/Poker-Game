@@ -11,17 +11,19 @@ const express = require('express');
 function serveWebGL(app, dir) {
   if (!dir || !fs.existsSync(path.join(dir, 'index.html'))) return false;
 
-  app.use(express.static(dir, {
-    setHeaders(res, filePath) {
-      if (filePath.endsWith('.br')) res.setHeader('Content-Encoding', 'br');
-      else if (filePath.endsWith('.gz')) res.setHeader('Content-Encoding', 'gzip');
+  app.use(
+    express.static(dir, {
+      setHeaders(res, filePath) {
+        if (filePath.endsWith('.br')) res.setHeader('Content-Encoding', 'br');
+        else if (filePath.endsWith('.gz')) res.setHeader('Content-Encoding', 'gzip');
 
-      const original = filePath.replace(/\.(br|gz)$/, '');
-      if (original.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm');
-      else if (original.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
-      else if (original.endsWith('.data')) res.setHeader('Content-Type', 'application/octet-stream');
-    },
-  }));
+        const original = filePath.replace(/\.(br|gz)$/, '');
+        if (original.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm');
+        else if (original.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+        else if (original.endsWith('.data')) res.setHeader('Content-Type', 'application/octet-stream');
+      },
+    }),
+  );
   return true;
 }
 

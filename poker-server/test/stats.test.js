@@ -24,14 +24,29 @@ test('records hands played, wins, biggest pot and best shown hand', async () => 
     handNames: { a: 'Two Pair' }, // worse than the Flush: best hand stays Flush
   });
 
-  assert.deepStrictEqual(await stats.get('a'), { handsPlayed: 3, handsWon: 2, biggestPot: 300, bestHand: 'Flush', bestHandRank: 5 });
-  assert.deepStrictEqual(await stats.get('b'), { handsPlayed: 2, handsWon: 1, biggestPot: 120, bestHand: 'One Pair', bestHandRank: 1 });
+  assert.deepStrictEqual(await stats.get('a'), {
+    handsPlayed: 3,
+    handsWon: 2,
+    biggestPot: 300,
+    bestHand: 'Flush',
+    bestHandRank: 5,
+  });
+  assert.deepStrictEqual(await stats.get('b'), {
+    handsPlayed: 2,
+    handsWon: 1,
+    biggestPot: 120,
+    bestHand: 'One Pair',
+    bestHandRank: 1,
+  });
 });
 
 test('split pot counts as a win for every winner', async () => {
   const stats = await newStats();
   await stats.recordHand(['a', 'b', 'c'], {
-    winners: [{ playerId: 'a', amount: 150 }, { playerId: 'b', amount: 150 }],
+    winners: [
+      { playerId: 'a', amount: 150 },
+      { playerId: 'b', amount: 150 },
+    ],
     handNames: { a: 'Straight', b: 'Straight', c: 'High Card' },
   });
   assert.strictEqual((await stats.get('a')).handsWon, 1);

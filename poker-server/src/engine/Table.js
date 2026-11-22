@@ -13,8 +13,8 @@ class Table {
     this.code = code;
     this.name = name;
     this.mode = mode;
-    this.hostId = hostId;  // who created the table; may start a friends game early
-    this.started = false;  // false = waiting room (friends tables until all seats are taken)
+    this.hostId = hostId; // who created the table; may start a friends game early
+    this.started = false; // false = waiting room (friends tables until all seats are taken)
     this.maxSeats = maxSeats;
     this.smallBlind = smallBlind;
     this.bigBlind = bigBlind;
@@ -24,7 +24,7 @@ class Table {
     // take a bot's seat (see TableRunner). { playerId, name, avatarId, connected }
     this.waiting = [];
     this.buttonSeat = -1;
-    this.hand = null;     // the running hand
+    this.hand = null; // the running hand
     this.lastHand = null; // the previous hand, kept for showing its result
     this.handNumber = 0;
   }
@@ -129,9 +129,7 @@ class Table {
     if (!this.canStartHand()) throw new Error('Not enough players to start a hand');
 
     this.buttonSeat = this.nextEligibleSeat(this.buttonSeat);
-    const dealtSeats = this.seats
-      .map((s, i) => (s && s.chips > 0 && !s.sittingOut ? i : -1))
-      .filter((i) => i !== -1); // clockwise by seat number
+    const dealtSeats = this.seats.map((s, i) => (s && s.chips > 0 && !s.sittingOut ? i : -1)).filter((i) => i !== -1); // clockwise by seat number
 
     this.hand = new HoldemHand({
       players: dealtSeats.map((i) => ({ playerId: this.seats[i].playerId, stack: this.seats[i].chips })),
@@ -146,7 +144,12 @@ class Table {
       handNumber: this.handNumber,
       startedAt: Date.now(),
       buttonSeat: this.buttonSeat,
-      seats: dealtSeats.map((i) => ({ seat: i, playerId: this.seats[i].playerId, name: this.seats[i].name, isBot: !!this.seats[i].isBot })),
+      seats: dealtSeats.map((i) => ({
+        seat: i,
+        playerId: this.seats[i].playerId,
+        name: this.seats[i].name,
+        isBot: !!this.seats[i].isBot,
+      })),
     };
     this.hand.start();
     this.syncChips();
@@ -207,8 +210,16 @@ class Table {
       handNumber: this.handNumber,
       seats: this.seats.map((s, i) =>
         s
-          ? { seat: i, playerId: s.playerId, name: s.name, avatarId: s.avatarId, chips: s.chips, isBot: s.isBot, connected: s.connected }
-          : null
+          ? {
+              seat: i,
+              playerId: s.playerId,
+              name: s.name,
+              avatarId: s.avatarId,
+              chips: s.chips,
+              isBot: s.isBot,
+              connected: s.connected,
+            }
+          : null,
       ),
     };
   }

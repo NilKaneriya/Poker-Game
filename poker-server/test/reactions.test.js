@@ -51,7 +51,10 @@ test('reaction: rate limited per player', () => {
   let now = 0;
   const s = service(() => now);
   const send = (id) => s.send({ id, name: id }, { emoteId: 'heart' });
-  assert.deepEqual([1, 2, 3, 4].map(() => Boolean(send('ann').reaction)), [true, true, true, false]);
+  assert.deepEqual(
+    [1, 2, 3, 4].map(() => Boolean(send('ann').reaction)),
+    [true, true, true, false],
+  );
   assert.ok(send('ann').error);
   assert.ok(send('bob').reaction); // other players are not affected
   now = 1001;
@@ -76,20 +79,24 @@ test('reactions over a real Socket.IO server: only my group sees it, errors only
   await new Promise((resolve) => server.listen(0, resolve));
   const url = `http://localhost:${server.address().port}`;
 
-  const connect = (id) => new Promise((resolve) => {
-    const s = ioClient(url, { auth: { id }, transports: ['websocket'] });
-    s.got = [];
-    s.on(REACTION_EVENTS.REACTION, (r) => s.got.push(r));
-    s.on(REACTION_EVENTS.ERROR, (e) => s.got.push({ error: e.message }));
-    s.on('connect', () => resolve(s));
-  });
+  const connect = (id) =>
+    new Promise((resolve) => {
+      const s = ioClient(url, { auth: { id }, transports: ['websocket'] });
+      s.got = [];
+      s.on(REACTION_EVENTS.REACTION, (r) => s.got.push(r));
+      s.on(REACTION_EVENTS.ERROR, (e) => s.got.push({ error: e.message }));
+      s.on('connect', () => resolve(s));
+    });
   const [ann, bob, cat] = await Promise.all(['ann', 'bob', 'cat'].map(connect));
   try {
     ann.emit(REACTION_EVENTS.SEND, { emoteId: 'cool', targetId: 'bob' });
     ann.emit(REACTION_EVENTS.SEND, { emoteId: 'cool', targetId: 'cat' });
     await new Promise((r) => setTimeout(r, 150));
 
-    assert.deepEqual(bob.got.map((r) => [r.emoteId, r.fromName, r.targetId]), [['cool', 'ANN', 'bob']]);
+    assert.deepEqual(
+      bob.got.map((r) => [r.emoteId, r.fromName, r.targetId]),
+      [['cool', 'ANN', 'bob']],
+    );
     assert.equal(ann.got.length, 2);
     assert.ok(ann.got[1].error);
     assert.equal(cat.got.length, 0);

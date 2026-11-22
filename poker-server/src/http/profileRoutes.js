@@ -48,7 +48,8 @@ function createProfileRoutes({ onProfileChanged = () => {} } = {}) {
   });
 
   // Storage errors: log them, answer with a short message (no internals to the client).
-  router.use((err, req, res, next) => {
+  // Express only treats a handler as an error handler when it takes 4 arguments, so _next stays.
+  router.use((err, req, res, _next) => {
     log.error(`Profile request failed: ${err.message}`);
     res.status(500).json({ error: 'Could not save right now, please try again' });
   });

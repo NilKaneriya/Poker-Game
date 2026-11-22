@@ -5,8 +5,13 @@
 const { io } = require('socket.io-client');
 
 const URL = process.env.SERVER_URL || 'http://localhost:3000';
-const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
-const check = (cond, msg) => { if (!cond) fail(msg); };
+const fail = (msg) => {
+  console.error('FAIL:', msg);
+  process.exit(1);
+};
+const check = (cond, msg) => {
+  if (!cond) fail(msg);
+};
 const GRACE_MS = Number(process.env.TEST_GRACE_MS || 0); // set by test:e2e (matches the server's RECONNECT_GRACE_MS)
 setTimeout(() => fail('timed out'), 90000);
 
@@ -90,7 +95,10 @@ async function waitingRoomChecks(alice, bob) {
   const seated = bots.seats.filter(Boolean);
   check(seated.length === 4 && seated.filter((s) => s.isBot).length === 3, 'bots table not filled with 3 bots');
   check(bots.started, 'bots table should start at once');
-  const list = await new Promise((resolve) => { bob.once('tableList', resolve); bob.emit('listTables'); });
+  const list = await new Promise((resolve) => {
+    bob.once('tableList', resolve);
+    bob.emit('listTables');
+  });
   check(!list.some((t) => t.code === bots.code), 'bots table shows in the open list');
 
   // Bob joins it by code during a hand: he watches until the hand ends, then a bot
@@ -125,7 +133,12 @@ async function waitingRoomChecks(alice, bob) {
 async function chatChecks(alice, bob) {
   const messageWhere = (socket, test) =>
     new Promise((resolve) => {
-      const handler = (m) => { if (test(m)) { socket.off('chatMessage', handler); resolve(m); } };
+      const handler = (m) => {
+        if (test(m)) {
+          socket.off('chatMessage', handler);
+          resolve(m);
+        }
+      };
       socket.on('chatMessage', handler);
     });
 
@@ -155,7 +168,10 @@ async function chatChecks(alice, bob) {
   check((await long).text.length === 140, 'long chat message not cut to 140');
 
   // History for someone opening the table later.
-  const history = await new Promise((resolve) => { bob.once('chatHistory', resolve); bob.emit('getChat'); });
+  const history = await new Promise((resolve) => {
+    bob.once('chatHistory', resolve);
+    bob.emit('getChat');
+  });
   check(history.code === room.code && history.messages.some((m) => m.id === msg.id), 'chat history missing the message');
 
   // Spam: the 6th message inside 10 seconds is refused (2 already sent above).
@@ -196,7 +212,12 @@ async function profileChecks(alice, bob, bobToken) {
 
   // ...and chat uses the new name.
   const said = new Promise((resolve) => {
-    const h = (m) => { if (m.kind === 'player') { alice.off('chatMessage', h); resolve(m); } };
+    const h = (m) => {
+      if (m.kind === 'player') {
+        alice.off('chatMessage', h);
+        resolve(m);
+      }
+    };
     alice.on('chatMessage', h);
   });
   bob.emit('chatSend', { text: 'new name' });
@@ -226,21 +247,34 @@ async function statsChecks(alice) {
     }
   };
   alice.on('tableState', autoPlay);
-  const before = await new Promise((resolve) => { alice.once('stats', resolve); alice.emit('getStats'); });
+  const before = await new Promise((resolve) => {
+    alice.once('stats', resolve);
+    alice.emit('getStats');
+  });
   alice.emit('createTable', { tableName: 'Stats', mode: 'bots', maxSeats: 2 });
   const after = await new Promise((resolve) => {
-    const handler = (s) => { if (s.handsPlayed > before.handsPlayed) { alice.off('stats', handler); resolve(s); } };
+    const handler = (s) => {
+      if (s.handsPlayed > before.handsPlayed) {
+        alice.off('stats', handler);
+        resolve(s);
+      }
+    };
     alice.on('stats', handler);
   });
   alice.off('tableState', autoPlay);
   check(after.handsPlayed === before.handsPlayed + 1, 'hands played did not go up by one');
   check(after.handsWon >= before.handsWon, 'hands won went down');
-  console.log(`Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`);
+  console.log(
+    `Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`,
+  );
 
   // The same hand is in Alice's hand history (saved in the background, so ask a few times).
   let latest = null;
   for (let attempt = 0; attempt < 10 && latest?.tableName !== 'Stats'; attempt++) {
-    const { hands } = await new Promise((resolve) => { alice.once('handHistory', resolve); alice.emit('getHandHistory'); });
+    const { hands } = await new Promise((resolve) => {
+      alice.once('handHistory', resolve);
+      alice.emit('getHandHistory');
+    });
     latest = hands[0];
     if (latest?.tableName !== 'Stats') await new Promise((r) => setTimeout(r, 100));
   }
@@ -249,7 +283,9 @@ async function statsChecks(alice) {
   check(latest.streets?.[0]?.actions?.length >= 2, 'hand history is missing the blinds');
   const hidden = latest.players.filter((p) => !p.isYou && p.cards.length > 0 && !latest.streets.some((s) => s.stage === 'river'));
   check(hidden.length === 0, 'hand history shows cards that were never shown');
-  console.log(`Hand history: hand #${latest.handNumber}, ${latest.streets.length} street(s), you ${latest.you.net >= 0 ? '+' : ''}${latest.you.net}`);
+  console.log(
+    `Hand history: hand #${latest.handNumber}, ${latest.streets.length} street(s), you ${latest.you.net >= 0 ? '+' : ''}${latest.you.net}`,
+  );
   alice.emit('leaveTable');
 }
 

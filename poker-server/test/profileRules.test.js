@@ -1,7 +1,12 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  AVATAR_COUNT, validateProfile, mergeSettings, withDefaults, defaultSettings, defaultAvatarFor,
+  AVATAR_COUNT,
+  validateProfile,
+  mergeSettings,
+  withDefaults,
+  defaultSettings,
+  defaultAvatarFor,
 } = require('../src/services/profileRules');
 
 test('display name: tidied, 3-16 letters, numbers, spaces or _', () => {

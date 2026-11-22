@@ -9,7 +9,13 @@ const fakeIo = { to: () => ({ emit() {} }), emit() {} };
 
 function botsTable(code, maxSeats = 4) {
   const table = new Table({
-    code, name: 'Bots', mode: TABLE_MODES.BOTS, maxSeats, smallBlind: 10, bigBlind: 20, startingChips: 1000,
+    code,
+    name: 'Bots',
+    mode: TABLE_MODES.BOTS,
+    maxSeats,
+    smallBlind: 10,
+    bigBlind: 20,
+    startingChips: 1000,
   });
   table.addPlayer({ playerId: 'host', name: 'Host' });
   const runner = runnerFor(fakeIo, table);

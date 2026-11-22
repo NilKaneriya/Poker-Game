@@ -30,11 +30,15 @@ test('every level only ever picks legal actions (200 bot-only hands)', () => {
       }
       table.finishHand();
     }
-    assert.equal(table.players.reduce((s, p) => s + p.chips, 0), 4000, `${level}: chips conserved`);
+    assert.equal(
+      table.players.reduce((s, p) => s + p.chips, 0),
+      4000,
+      `${level}: chips conserved`,
+    );
   }
 });
 
-test('a bot never sees other players\' hole cards', () => {
+test("a bot never sees other players' hole cards", () => {
   const table = new Table({ code: 'PEEK', name: 'Peek', maxSeats: 6, smallBlind: 10, bigBlind: 20, startingChips: 1000 });
   table.addPlayer({ playerId: 'bot', name: 'bot', isBot: true });
   table.addPlayer({ playerId: 'human', name: 'human' });

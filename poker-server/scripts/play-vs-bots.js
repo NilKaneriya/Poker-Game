@@ -5,7 +5,10 @@ const { io } = require('socket.io-client');
 
 const URL = process.env.SERVER_URL || 'http://localhost:3000';
 const HANDS_TO_PLAY = Number(process.env.HANDS || 3);
-const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
+const fail = (msg) => {
+  console.error('FAIL:', msg);
+  process.exit(1);
+};
 setTimeout(() => fail('timed out'), 60000);
 
 (async () => {
@@ -15,7 +18,7 @@ setTimeout(() => fail('timed out'), 60000);
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password: 'secret123' }),
   });
-  const { token, playerId } = await res.json();
+  const { token } = await res.json();
   if (!token) fail('could not register');
 
   const socket = io(URL, { auth: { token } });
@@ -28,7 +31,10 @@ setTimeout(() => fail('timed out'), 60000);
   let resultShownFor = -1;
 
   socket.on('tableState', (state) => {
-    const names = state.seats.filter(Boolean).map((s) => `${s.name}(${s.chips})`).join(', ');
+    const names = state.seats
+      .filter(Boolean)
+      .map((s) => `${s.name}(${s.chips})`)
+      .join(', ');
     const hand = state.hand;
     if (!hand) {
       const line = `-- waiting | ${names}`;
@@ -46,7 +52,8 @@ setTimeout(() => fail('timed out'), 60000);
 
     if (hand.result && resultShownFor !== state.handNumber) {
       resultShownFor = state.handNumber;
-      for (const w of hand.result.winners) console.log(`   => ${w.name} wins ${w.amount}${w.handName ? ` with ${w.handName}` : ''}`);
+      for (const w of hand.result.winners)
+        console.log(`   => ${w.name} wins ${w.amount}${w.handName ? ` with ${w.handName}` : ''}`);
       if (++handsSeen >= HANDS_TO_PLAY) {
         console.log(`OK: played ${handsSeen} hands against bots`);
         process.exit(0);

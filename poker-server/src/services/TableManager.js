@@ -29,7 +29,11 @@ class TableManager {
   }
 
   get(code) {
-    return this.tables.get(String(code || '').trim().toUpperCase());
+    return this.tables.get(
+      String(code || '')
+        .trim()
+        .toUpperCase(),
+    );
   }
 
   remove(code) {

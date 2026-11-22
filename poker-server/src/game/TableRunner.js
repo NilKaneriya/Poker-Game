@@ -27,11 +27,11 @@ class TableRunner {
     this.io = io;
     this.table = table;
     this.turnTimer = new TurnTimer();
-    this.turnKey = null;      // identifies the current turn so stale timers/bot moves are ignored
+    this.turnKey = null; // identifies the current turn so stale timers/bot moves are ignored
     this.actionCount = 0;
-    this.pending = null;      // the scheduled "start hand" or "finish hand"
+    this.pending = null; // the scheduled "start hand" or "finish hand"
     this.botTimer = null;
-    this.bots = new Map();    // playerId -> BotPlayer
+    this.bots = new Map(); // playerId -> BotPlayer
     this.botsAdded = 0;
   }
 
@@ -123,7 +123,8 @@ class TableRunner {
   recordStats(result) {
     const humans = this.table.lastHand.players.map((p) => p.playerId).filter((id) => !this.bots.has(id));
     // Saving must never hold up the table, so it runs in the background.
-    stats.recordHand(humans, result)
+    stats
+      .recordHand(humans, result)
       .then(() => humans.forEach((playerId) => sendStats(this.io, playerId)))
       .catch((err) => log.error(`Table ${this.table.code}: could not save stats: ${err.message}`));
   }
@@ -132,7 +133,8 @@ class TableRunner {
   recordHistory() {
     const hand = this.table.lastHand;
     const humans = hand.players.map((p) => p.playerId).filter((id) => !this.bots.has(id));
-    history.recordHand(this.table, hand, humans)
+    history
+      .recordHand(this.table, hand, humans)
       .catch((err) => log.error(`Table ${this.table.code}: could not save hand history: ${err.message}`));
   }
 
@@ -228,9 +230,7 @@ class TableRunner {
 
   /** Stand up one bot (the one with the fewest chips, so the least play is disturbed). */
   removeBot() {
-    const bot = this.table.players
-      .filter((p) => p.isBot)
-      .sort((a, b) => a.chips - b.chips)[0];
+    const bot = this.table.players.filter((p) => p.isBot).sort((a, b) => a.chips - b.chips)[0];
     if (!bot) return false;
     this.table.removePlayer(bot.playerId);
     this.bots.delete(bot.playerId);

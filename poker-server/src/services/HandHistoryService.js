@@ -15,12 +15,14 @@ class HandHistoryService {
 
   /** Save a finished hand for every human who was dealt in. */
   async recordHand(table, hand, playerIds) {
-    await Promise.all(playerIds.map(async (playerId) => {
-      const record = buildHandRecord(table, hand, playerId);
-      const doc = (await this.collection.get(playerId)) || { hands: [] };
-      const hands = [record, ...(doc.hands || []).filter((h) => h.id !== record.id)].slice(0, KEEP);
-      await this.collection.set(playerId, { hands });
-    }));
+    await Promise.all(
+      playerIds.map(async (playerId) => {
+        const record = buildHandRecord(table, hand, playerId);
+        const doc = (await this.collection.get(playerId)) || { hands: [] };
+        const hands = [record, ...(doc.hands || []).filter((h) => h.id !== record.id)].slice(0, KEEP);
+        await this.collection.set(playerId, { hands });
+      }),
+    );
   }
 
   /** The player's hands, newest first. */

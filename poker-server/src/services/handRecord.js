@@ -37,7 +37,7 @@ function buildHandRecord(table, hand, viewerId) {
       net: p.stack - p.startStack,
       folded: p.folded,
       cards,
-      handName: cards.length ? handNames[p.playerId] ?? '' : '',
+      handName: cards.length ? (handNames[p.playerId] ?? '') : '',
     };
   });
 
@@ -55,7 +55,12 @@ function buildHandRecord(table, hand, viewerId) {
     you: me ? { cards: me.cards, net: me.net, folded: me.folded, handName: me.handName } : null,
     players,
     streets: buildStreets(hand, nameOf),
-    winners: result.winners.map((w) => ({ playerId: w.playerId, name: nameOf(w.playerId), amount: w.amount, handName: w.handName || '' })),
+    winners: result.winners.map((w) => ({
+      playerId: w.playerId,
+      name: nameOf(w.playerId),
+      amount: w.amount,
+      handName: w.handName || '',
+    })),
   };
 }
 

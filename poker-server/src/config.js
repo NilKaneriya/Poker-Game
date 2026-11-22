@@ -6,9 +6,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 module.exports = {
   port: num(process.env.PORT, 3000),
-  corsOrigin: process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
-    : '*',
+  corsOrigin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()) : '*',
 
   table: {
     minSeats: 2, // the host picks the table size in this range

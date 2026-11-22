@@ -16,7 +16,10 @@ function cleanChatText(value, maxLength) {
     .replace(/[\p{Cc}\p{Cf}\u2028\u2029]/gu, ' ') // control/format characters, line breaks
     .replace(/\s+/g, ' ')
     .trim();
-  return [...text].slice(0, maxLength).join('').trim() // cut by characters, not UTF-16 halves
+  return [...text]
+    .slice(0, maxLength)
+    .join('')
+    .trim() // cut by characters, not UTF-16 halves
     .replace(BLOCKED_RE, (word) => '*'.repeat(word.length));
 }
 

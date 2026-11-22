@@ -34,22 +34,24 @@ class StatsService {
    * @param {object} result       HoldemHand result ({ winners, handNames? })
    */
   async recordHand(playerIds, result) {
-    await Promise.all(playerIds.map(async (playerId) => {
-      const s = { ...EMPTY(), ...((await this.stats.get(playerId)) || {}) };
-      s.handsPlayed++;
+    await Promise.all(
+      playerIds.map(async (playerId) => {
+        const s = { ...EMPTY(), ...((await this.stats.get(playerId)) || {}) };
+        s.handsPlayed++;
 
-      const win = result.winners.find((w) => w.playerId === playerId);
-      if (win) {
-        s.handsWon++;
-        s.biggestPot = Math.max(s.biggestPot, win.amount);
-      }
+        const win = result.winners.find((w) => w.playerId === playerId);
+        if (win) {
+          s.handsWon++;
+          s.biggestPot = Math.max(s.biggestPot, win.amount);
+        }
 
-      // A hand is only known when it is shown at showdown (nobody shows when everyone else folds).
-      const rank = HAND_NAMES.indexOf(result.handNames?.[playerId] ?? '');
-      if (rank > s.bestHandRank) s.bestHandRank = rank;
+        // A hand is only known when it is shown at showdown (nobody shows when everyone else folds).
+        const rank = HAND_NAMES.indexOf(result.handNames?.[playerId] ?? '');
+        if (rank > s.bestHandRank) s.bestHandRank = rank;
 
-      await this.stats.set(playerId, s);
-    }));
+        await this.stats.set(playerId, s);
+      }),
+    );
   }
 }
 

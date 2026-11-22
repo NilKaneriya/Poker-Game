@@ -59,7 +59,10 @@ function distributePots(pots, hands, seatOrderFromButton) {
 
     let winners = [];
     for (const id of candidates) {
-      if (winners.length === 0) { winners = [id]; continue; }
+      if (winners.length === 0) {
+        winners = [id];
+        continue;
+      }
       const hand = hands.get(id);
       const diff = hand ? compare(hand, hands.get(winners[0])) : 0;
       if (diff > 0) winners = [id];

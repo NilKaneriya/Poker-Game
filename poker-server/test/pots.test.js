@@ -33,11 +33,15 @@ test('chips above every remaining player (from a folder) join the pot below', ()
 test('short all-in wins only the main pot; the side pot goes to the next best hand', () => {
   const board = 'Jd 8c 5h 3s 2c';
   const pots = buildPots([c('a', 50), c('b', 200), c('c', 200)]);
-  const results = distributePots(pots, hands({
-    a: `As Ah ${board}`, // best hand, but only covered for 50
-    b: `Ks Kh ${board}`, // second best
-    c: `Qs Qh ${board}`,
-  }), ['a', 'b', 'c']);
+  const results = distributePots(
+    pots,
+    hands({
+      a: `As Ah ${board}`, // best hand, but only covered for 50
+      b: `Ks Kh ${board}`, // second best
+      c: `Qs Qh ${board}`,
+    }),
+    ['a', 'b', 'c'],
+  );
 
   assert.deepEqual(results, [
     { amount: 150, winners: [{ playerId: 'a', share: 150 }] },
@@ -47,9 +51,15 @@ test('short all-in wins only the main pot; the side pot goes to the next best ha
 
 test('tied hands split the pot equally', () => {
   const board = 'Ah Kh Qh Jh Th'; // royal flush on board: everyone plays it
-  const results = distributePots([{ amount: 300, eligible: ['a', 'b', 'c'] }],
-    hands({ a: `2c 3d ${board}`, b: `4c 5d ${board}`, c: `6c 7d ${board}` }), ['a', 'b', 'c']);
-  assert.deepEqual(results[0].winners.map((w) => w.share), [100, 100, 100]);
+  const results = distributePots(
+    [{ amount: 300, eligible: ['a', 'b', 'c'] }],
+    hands({ a: `2c 3d ${board}`, b: `4c 5d ${board}`, c: `6c 7d ${board}` }),
+    ['a', 'b', 'c'],
+  );
+  assert.deepEqual(
+    results[0].winners.map((w) => w.share),
+    [100, 100, 100],
+  );
 });
 
 test('odd chip goes to the tied winner closest to the left of the button', () => {
@@ -59,11 +69,13 @@ test('odd chip goes to the tied winner closest to the left of the button', () =>
 
   // Seat order from the button: b is first, so b gets the extra chip.
   assert.deepEqual(distributePots(pot, h, ['b', 'a'])[0].winners, [
-    { playerId: 'b', share: 51 }, { playerId: 'a', share: 50 },
+    { playerId: 'b', share: 51 },
+    { playerId: 'a', share: 50 },
   ]);
   // Same pot, other button position: a gets it.
   assert.deepEqual(distributePots(pot, h, ['a', 'b'])[0].winners, [
-    { playerId: 'a', share: 51 }, { playerId: 'b', share: 50 },
+    { playerId: 'a', share: 51 },
+    { playerId: 'b', share: 50 },
   ]);
 });
 
@@ -71,13 +83,23 @@ test('a split can happen in one pot while another pot has a single winner', () =
   const board = '9d 9c 4h 4s 2c';
   // a and b both play two pair 9s and 4s with an ace kicker; c is covered by b only.
   const pots = buildPots([c('a', 100), c('b', 300), c('c', 300)]);
-  const results = distributePots(pots, hands({
-    a: `Ah 3d ${board}`,
-    b: `As 3c ${board}`,
-    c: `Kh Qh ${board}`,
-  }), ['c', 'a', 'b']);
+  const results = distributePots(
+    pots,
+    hands({
+      a: `Ah 3d ${board}`,
+      b: `As 3c ${board}`,
+      c: `Kh Qh ${board}`,
+    }),
+    ['c', 'a', 'b'],
+  );
 
-  assert.deepEqual(results[0], { amount: 300, winners: [{ playerId: 'a', share: 150 }, { playerId: 'b', share: 150 }] });
+  assert.deepEqual(results[0], {
+    amount: 300,
+    winners: [
+      { playerId: 'a', share: 150 },
+      { playerId: 'b', share: 150 },
+    ],
+  });
   assert.deepEqual(results[1], { amount: 400, winners: [{ playerId: 'b', share: 400 }] });
 });
 
@@ -85,10 +107,20 @@ test('no chips are created or lost', () => {
   const contributions = [c('a', 37), c('b', 120, true), c('c', 250), c('d', 251), c('e', 999)];
   const pots = buildPots(contributions);
   const board = '2c 7d 9h Js Kd';
-  const results = distributePots(pots, hands({
-    a: `As Ah ${board}`, c: `Ks Kh ${board}`, d: `Qs Qh ${board}`, e: `3s 4h ${board}`,
-  }), ['a', 'b', 'c', 'd', 'e']);
-  assert.equal(totalOf(results), contributions.reduce((s, x) => s + x.amount, 0));
+  const results = distributePots(
+    pots,
+    hands({
+      a: `As Ah ${board}`,
+      c: `Ks Kh ${board}`,
+      d: `Qs Qh ${board}`,
+      e: `3s 4h ${board}`,
+    }),
+    ['a', 'b', 'c', 'd', 'e'],
+  );
+  assert.equal(
+    totalOf(results),
+    contributions.reduce((s, x) => s + x.amount, 0),
+  );
 });
 
 test('when everyone else folded the last player takes the pot without a hand', () => {

@@ -22,15 +22,25 @@ const INFO = {
 function showdownHand() {
   const hand = makeHand({
     stacks: [1000, 1000, 1000],
-    hole: [['Ah', 'Ad'], ['Ks', 'Kc'], ['2c', '7d']],
+    hole: [
+      ['Ah', 'Ad'],
+      ['Ks', 'Kc'],
+      ['2c', '7d'],
+    ],
     board: ['Ac', 'Kd', '5h', '9s', '3c'],
   });
   hand.info = INFO;
   play(hand, [
-    ['p0', 'raise', 60], ['p1', 'call'], ['p2', 'fold'], //   pre-flop
-    ['p1', 'check'], ['p0', 'raise', 100], ['p1', 'call'], // flop
-    ['p1', 'check'], ['p0', 'check'], //                       turn
-    ['p1', 'check'], ['p0', 'check'], //                       river
+    ['p0', 'raise', 60],
+    ['p1', 'call'],
+    ['p2', 'fold'], //   pre-flop
+    ['p1', 'check'],
+    ['p0', 'raise', 100],
+    ['p1', 'call'], // flop
+    ['p1', 'check'],
+    ['p0', 'check'], //                       turn
+    ['p1', 'check'],
+    ['p0', 'check'], //                       river
   ]);
   return hand;
 }
@@ -39,7 +49,10 @@ const summary = (street) => street.actions.map((a) => `${a.name} ${a.kind} ${a.a
 
 test('hand log: blinds, every action and the bet/raise difference, street by street', () => {
   const record = buildHandRecord(TABLE, showdownHand(), 'p0');
-  assert.deepEqual(record.streets.map((s) => s.stage), ['preflop', 'flop', 'turn', 'river']);
+  assert.deepEqual(
+    record.streets.map((s) => s.stage),
+    ['preflop', 'flop', 'turn', 'river'],
+  );
   assert.deepEqual(summary(record.streets[0]), ['Bob sb 10', 'Cat bb 20', 'Ann raise 60', 'Bob call 50', 'Cat fold 0']);
   assert.deepEqual(summary(record.streets[1]), ['Bob check 0', 'Ann bet 100', 'Bob call 100']);
   assert.deepEqual(record.streets[1].cards, ['Ac', 'Kd', '5h']);
@@ -51,7 +64,14 @@ test('hand log: blinds, every action and the bet/raise difference, street by str
 test('hand record: chips won and lost per player, winners with their hand', () => {
   const record = buildHandRecord(TABLE, showdownHand(), 'p0');
   assert.equal(record.pot, 340);
-  assert.deepEqual(record.players.map((p) => [p.name, p.net]), [['Ann', 180], ['Bob', -160], ['Cat', -20]]);
+  assert.deepEqual(
+    record.players.map((p) => [p.name, p.net]),
+    [
+      ['Ann', 180],
+      ['Bob', -160],
+      ['Cat', -20],
+    ],
+  );
   assert.deepEqual(record.winners, [{ playerId: 'p0', name: 'Ann', amount: 340, handName: 'Three of a Kind' }]);
   assert.deepEqual(record.you, { cards: ['Ah', 'Ad'], net: 180, folded: false, handName: 'Three of a Kind' });
   assert.equal(record.players[0].isButton, true);
@@ -69,17 +89,37 @@ test('hand record: you see your own cards and cards shown at showdown, never fol
   assert.equal(catView.you.folded, true);
 });
 
-test('hand record: won without showdown: nobody else\'s cards, the uncalled bet comes back', () => {
-  const hand = makeHand({ stacks: [1000, 1000, 1000], hole: [['Ah', 'Ad'], ['Ks', 'Kc'], ['2c', '7d']] });
+test("hand record: won without showdown: nobody else's cards, the uncalled bet comes back", () => {
+  const hand = makeHand({
+    stacks: [1000, 1000, 1000],
+    hole: [
+      ['Ah', 'Ad'],
+      ['Ks', 'Kc'],
+      ['2c', '7d'],
+    ],
+  });
   hand.info = INFO;
-  play(hand, [['p0', 'raise', 60], ['p1', 'fold'], ['p2', 'fold']]);
+  play(hand, [
+    ['p0', 'raise', 60],
+    ['p1', 'fold'],
+    ['p2', 'fold'],
+  ]);
 
   const record = buildHandRecord(TABLE, hand, 'p1');
-  assert.deepEqual(record.streets.map((s) => s.stage), ['preflop']);
+  assert.deepEqual(
+    record.streets.map((s) => s.stage),
+    ['preflop'],
+  );
   assert.deepEqual(summary(record.streets[0]).slice(-1), ['Ann returned 40']);
   assert.deepEqual(record.players.find((p) => p.name === 'Ann').cards, []);
-  assert.deepEqual(record.winners.map((w) => [w.name, w.amount, w.handName]), [['Ann', 50, '']]);
-  assert.deepEqual(record.players.map((p) => p.net), [30, -10, -20]);
+  assert.deepEqual(
+    record.winners.map((w) => [w.name, w.amount, w.handName]),
+    [['Ann', 50, '']],
+  );
+  assert.deepEqual(
+    record.players.map((p) => p.net),
+    [30, -10, -20],
+  );
 });
 
 test('hand log: timeouts and players who left are marked', () => {
@@ -88,17 +128,37 @@ test('hand log: timeouts and players who left are marked', () => {
   hand.actOnTimeout('p0'); // has to call 20: folds
   hand.foldOutOfTurn('p2');
   const actions = buildHandRecord(TABLE, hand, 'p1').streets[0].actions;
-  assert.deepEqual(actions.find((a) => a.name === 'Ann'), { playerId: 'p0', name: 'Ann', kind: 'fold', amount: 0, total: 0, timeout: true });
+  assert.deepEqual(
+    actions.find((a) => a.name === 'Ann'),
+    { playerId: 'p0', name: 'Ann', kind: 'fold', amount: 0, total: 0, timeout: true },
+  );
   assert.equal(actions.find((a) => a.name === 'Cat' && a.kind === 'fold').left, true);
 });
 
 test('all-in pre-flop: the rest of the board is dealt with no actions on later streets', () => {
-  const hand = makeHand({ stacks: [500, 500], button: 0, hole: [['Ah', 'Ad'], ['Ks', 'Kc']] });
+  const hand = makeHand({
+    stacks: [500, 500],
+    button: 0,
+    hole: [
+      ['Ah', 'Ad'],
+      ['Ks', 'Kc'],
+    ],
+  });
   hand.info = { ...INFO, seats: INFO.seats.slice(0, 2) };
-  play(hand, [['p0', 'allIn'], ['p1', 'call']]);
+  play(hand, [
+    ['p0', 'allIn'],
+    ['p1', 'call'],
+  ]);
   const record = buildHandRecord(TABLE, hand, 'p0');
-  assert.deepEqual(record.streets.map((s) => [s.stage, s.cards.length, s.actions.length]),
-    [['preflop', 0, 4], ['flop', 3, 0], ['turn', 1, 0], ['river', 1, 0]]);
+  assert.deepEqual(
+    record.streets.map((s) => [s.stage, s.cards.length, s.actions.length]),
+    [
+      ['preflop', 0, 4],
+      ['flop', 3, 0],
+      ['turn', 1, 0],
+      ['river', 1, 0],
+    ],
+  );
   assert.equal(record.streets[0].actions[2].kind, 'allIn');
 });
 
@@ -109,7 +169,13 @@ test('table: each hand knows its number, button and who was dealt in', () => {
   const hand = table.startHand();
   assert.equal(hand.info.handNumber, 1);
   assert.equal(hand.info.buttonSeat, table.buttonSeat);
-  assert.deepEqual(hand.info.seats.map((s) => [s.name, s.isBot]), [['Ann', false], ['Bob', true]]);
+  assert.deepEqual(
+    hand.info.seats.map((s) => [s.name, s.isBot]),
+    [
+      ['Ann', false],
+      ['Bob', true],
+    ],
+  );
 });
 
 test('history service: per player, newest first, only the last hands are kept', async () => {

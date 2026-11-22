@@ -28,7 +28,9 @@ async function main() {
   profiles.attach(storage);
   stats.attach(storage);
   handHistory.attach(storage);
-  log.info(`Player data: ${storage.kind === 'mongodb' ? `MongoDB (database "${config.storage.mongoDb}")` : `JSON files in ${config.storage.dataDir}`}`);
+  log.info(
+    `Player data: ${storage.kind === 'mongodb' ? `MongoDB (database "${config.storage.mongoDb}")` : `JSON files in ${config.storage.dataDir}`}`,
+  );
 
   // 2. HTTP: health, tables, login, profile, and the WebGL game.
   const app = express();

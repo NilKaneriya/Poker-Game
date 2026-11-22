@@ -41,13 +41,13 @@ test('dealer button moves one seat clockwise each hand', () => {
 
 test('button skips empty seats and players with no chips', () => {
   const table = makeTable(['a', 'b', 'c', 'd']);
-  table.removePlayer('b');                 // seat 1 empty
-  table.getSeat('c').chips = 0;            // seat 2 busted
+  table.removePlayer('b'); // seat 1 empty
+  table.getSeat('c').chips = 0; // seat 2 busted
   table.startHand();
   assert.equal(table.buttonSeat, 0);
   foldAround(table);
   table.startHand();
-  assert.equal(table.buttonSeat, 3);       // skipped seats 1 and 2
+  assert.equal(table.buttonSeat, 3); // skipped seats 1 and 2
   assert.equal(table.isDealtIn('c'), false); // busted player watches
 });
 
@@ -58,7 +58,10 @@ test('seat chips follow the hand and settle when it ends', () => {
   assert.equal(table.getSeat('cat').chips, 980);
   const result = foldAround(table);
   assert.equal(result.winners[0].playerId, 'cat');
-  assert.deepEqual(table.players.map((p) => p.chips), [1000, 990, 1010]);
+  assert.deepEqual(
+    table.players.map((p) => p.chips),
+    [1000, 990, 1010],
+  );
   assert.equal(table.hand, null);
   assert.ok(table.lastHand.isComplete);
 });
@@ -66,10 +69,10 @@ test('seat chips follow the hand and settle when it ends', () => {
 test('leaving mid-hand folds the player and keeps their bet in the pot', () => {
   const table = makeTable();
   table.startHand();
-  table.removePlayer('bob');               // small blind leaves
+  table.removePlayer('bob'); // small blind leaves
   assert.equal(table.findSeat('bob'), -1);
   assert.equal(table.hand.getPlayer('bob').folded, true);
-  assert.equal(table.hand.pot, 30);        // his 10 is still in the pot
+  assert.equal(table.hand.pot, 30); // his 10 is still in the pot
 });
 
 test('a player joining mid-hand waits for the next hand', () => {
@@ -84,7 +87,7 @@ test('a player joining mid-hand waits for the next hand', () => {
 
 test('rebuy only when out of chips and not in a running hand', () => {
   const table = makeTable(['a', 'b']);
-  assert.equal(table.rebuy('a').ok, false);           // still has chips
+  assert.equal(table.rebuy('a').ok, false); // still has chips
   table.getSeat('a').chips = 0;
   assert.deepEqual(table.rebuy('a'), { ok: true });
   assert.equal(table.getSeat('a').chips, 1000);

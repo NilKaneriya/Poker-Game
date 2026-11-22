@@ -167,8 +167,12 @@ class HoldemHand {
 
     const legal = this.getLegalActions(playerId);
     // Not enough chips to call: the call becomes an all-in automatically.
-    if (action === ACTIONS.CALL && !legal.actions.includes(ACTIONS.CALL) && legal.actions.includes(ACTIONS.ALL_IN)
-      && p.stack <= this.currentBet - p.bet) {
+    if (
+      action === ACTIONS.CALL &&
+      !legal.actions.includes(ACTIONS.CALL) &&
+      legal.actions.includes(ACTIONS.ALL_IN) &&
+      p.stack <= this.currentBet - p.bet
+    ) {
       action = ACTIONS.ALL_IN;
     }
     if (!legal.actions.includes(action)) return fail(`You can't ${action} right now`);
@@ -253,8 +257,8 @@ class HoldemHand {
 
   needsToAct(p) {
     if (!this.canBet(p)) return false;
-    if (p.bet < this.currentBet) return true;   // must call, raise or fold
-    if (p.hasActed) return false;               // already matched and acted
+    if (p.bet < this.currentBet) return true; // must call, raise or fold
+    if (p.hasActed) return false; // already matched and acted
     // Hasn't acted yet with nothing to call: only matters if someone could still respond.
     return this.players.some((o) => o !== p && this.canBet(o));
   }

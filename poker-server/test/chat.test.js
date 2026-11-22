@@ -29,7 +29,10 @@ test('chat text: swear words are masked, normal words are kept', () => {
 test('rate limiter: allows N per window, then refuses until the window moves on', () => {
   let now = 0;
   const limiter = new RateLimiter({ max: 3, windowMs: 1000, now: () => now });
-  assert.deepEqual([1, 2, 3, 4].map(() => limiter.tryHit('a')), [true, true, true, false]);
+  assert.deepEqual(
+    [1, 2, 3, 4].map(() => limiter.tryHit('a')),
+    [true, true, true, false],
+  );
   assert.equal(limiter.tryHit('b'), true); // per player
   now = 1001;
   assert.equal(limiter.tryHit('a'), true);
@@ -39,7 +42,10 @@ test('chat history: per table, oldest first, capped, cleared with the table', ()
   const chat = new ChatStore(3);
   for (let i = 1; i <= 5; i++) chat.addPlayerMessage('T1', { playerId: 'p', name: 'P' }, `m${i}`);
   chat.addSystemMessage('T2', 'Bob joined the table');
-  assert.deepEqual(chat.history('T1').map((m) => m.text), ['m3', 'm4', 'm5']);
+  assert.deepEqual(
+    chat.history('T1').map((m) => m.text),
+    ['m3', 'm4', 'm5'],
+  );
   assert.equal(chat.history('T2')[0].kind, 'system');
   assert.equal(chat.history('T2')[0].playerId, null);
   chat.clear('T1');
@@ -62,11 +68,18 @@ test('chat module: turns game events into system messages for that table only', 
 
   gameEvents.emit(GAME_EVENTS.PLAYER_JOINED, { code: 'T1', playerId: 'b', name: 'Bob' });
   gameEvents.emit(GAME_EVENTS.HAND_FINISHED, {
-    code: 'T1', handNumber: 1,
-    winners: [{ playerId: 'a', name: 'Ava', amount: 150, handName: 'Flush' }, { playerId: 'x', name: null, amount: 150, handName: '' }],
+    code: 'T1',
+    handNumber: 1,
+    winners: [
+      { playerId: 'a', name: 'Ava', amount: 150, handName: 'Flush' },
+      { playerId: 'x', name: null, amount: 150, handName: '' },
+    ],
   });
 
-  assert.deepEqual(sent.map((s) => s.msg.text), ['Bob joined the table', 'Ava won 150 with Flush', 'A player who left won 150']);
+  assert.deepEqual(
+    sent.map((s) => s.msg.text),
+    ['Bob joined the table', 'Ava won 150 with Flush', 'A player who left won 150'],
+  );
   assert.ok(sent.every((s) => s.room === 'table:T1' && s.event === 'chatMessage' && s.msg.kind === 'system'));
   assert.equal(store.history('T1').length, 3);
 
