@@ -252,33 +252,35 @@ async function statsChecks(alice) {
     alice.emit('getStats');
   });
   alice.emit('createTable', { tableName: 'Stats', mode: 'bots', maxSeats: 2 });
-  const after = await new Promise((resolve) => {
-    const handler = (s) => {
-      if (s.handsPlayed > before.handsPlayed) {
-        alice.off('stats', handler);
-        resolve(s);
-      }
-    };
-    alice.on('stats', handler);
-  });
+  // Wait for the first hand at this table to end. (Stats can also move because of a hand
+  // at a table Alice left earlier, which ends when its turn timer runs out.)
+  await stateWhere(alice, (s) => s.name === 'Stats' && s.hand?.result);
   alice.off('tableState', autoPlay);
-  check(after.handsPlayed === before.handsPlayed + 1, 'hands played did not go up by one');
-  check(after.handsWon >= before.handsWon, 'hands won went down');
-  console.log(
-    `Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`,
-  );
 
-  // The same hand is in Alice's hand history (saved in the background, so ask a few times).
+  // That hand is in Alice's hand history (saved in the background, so ask a few times).
   let latest = null;
-  for (let attempt = 0; attempt < 10 && latest?.tableName !== 'Stats'; attempt++) {
+  let newest = null;
+  for (let attempt = 0; attempt < 40 && !latest; attempt++) {
     const { hands } = await new Promise((resolve) => {
       alice.once('handHistory', resolve);
       alice.emit('getHandHistory');
     });
-    latest = hands[0];
-    if (latest?.tableName !== 'Stats') await new Promise((r) => setTimeout(r, 100));
+    newest = hands[0];
+    latest = hands.find((h) => h.tableName === 'Stats');
+    if (!latest) await new Promise((r) => setTimeout(r, 100));
   }
-  check(latest?.tableName === 'Stats', 'the hand is not in the hand history');
+  check(latest, `the hand is not in the hand history (newest: ${newest ? `${newest.tableName} #${newest.handNumber}` : 'none'})`);
+
+  // ...and counted in her stats (saved at the same time as the history).
+  const after = await new Promise((resolve) => {
+    alice.once('stats', resolve);
+    alice.emit('getStats');
+  });
+  check(after.handsPlayed > before.handsPlayed, 'hands played did not go up');
+  check(after.handsWon >= before.handsWon, 'hands won went down');
+  console.log(
+    `Stats after a hand: played ${after.handsPlayed}, won ${after.handsWon}, biggest pot ${after.biggestPot}, best hand "${after.bestHand}"`,
+  );
   check(latest.you?.cards?.length === 2, 'hand history is missing your hole cards');
   check(latest.streets?.[0]?.actions?.length >= 2, 'hand history is missing the blinds');
   const hidden = latest.players.filter((p) => !p.isYou && p.cards.length > 0 && !latest.streets.some((s) => s.stage === 'river'));

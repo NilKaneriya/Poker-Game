@@ -1,4 +1,5 @@
 const { buildHandRecord } = require('./handRecord');
+const KeyedQueue = require('../utils/KeyedQueue');
 
 const KEEP = 30; // hands kept per player
 
@@ -7,6 +8,8 @@ const KEEP = 30; // hands kept per player
  * Kept in storage (MongoDB or JSON files), one document per player: { hands: [...] }.
  */
 class HandHistoryService {
+  queue = new KeyedQueue();
+
   /** @param {{ handHistory }} storage */
   attach(storage) {
     this.collection = storage.handHistory;
@@ -16,12 +19,15 @@ class HandHistoryService {
   /** Save a finished hand for every human who was dealt in. */
   async recordHand(table, hand, playerIds) {
     await Promise.all(
-      playerIds.map(async (playerId) => {
-        const record = buildHandRecord(table, hand, playerId);
-        const doc = (await this.collection.get(playerId)) || { hands: [] };
-        const hands = [record, ...(doc.hands || []).filter((h) => h.id !== record.id)].slice(0, KEEP);
-        await this.collection.set(playerId, { hands });
-      }),
+      playerIds.map((playerId) =>
+        // One save at a time per player: see utils/KeyedQueue.js
+        this.queue.run(playerId, async () => {
+          const record = buildHandRecord(table, hand, playerId);
+          const doc = (await this.collection.get(playerId)) || { hands: [] };
+          const hands = [record, ...(doc.hands || []).filter((h) => h.id !== record.id)].slice(0, KEEP);
+          await this.collection.set(playerId, { hands });
+        }),
+      ),
     );
   }
 
