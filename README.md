@@ -78,8 +78,8 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test               # 93 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
-                       # waiting list, chat, storage, accounts, profile and settings rules
+npm test               # 102 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
+                       # waiting list, chat, reactions, storage, accounts, profile and settings rules
 npm run test:mongo     # the storage/account/profile/stats tests again on a real MongoDB
                        # (mongodb-memory-server downloads one the first time; nothing to install)
 npm run test:e2e       # starts a throwaway server and plays through the network: login, join by code,
@@ -236,6 +236,7 @@ editor tool, so the scenes are reproducible from code.
 | Optional: sound and dealing animations | Dealing, chips, street banners; music and sound effects (placeholders made in code) with on/off |
 | Extra: profile and settings in MongoDB | Lobby profile card and editor (avatar, display name, bio); Settings panel in Lobby and Game (music/sound on/off + volume, hand-strength hint, four-colour deck, chat on/off, break reminders); saved per account (`/profile` routes, tested on MongoDB) |
 | Extra: table chat (separate module) | `poker-server/src/chat/` + `Assets/Scripts/Chat/`: table-only messages, quick phrases, unread badge, hand log ("Ava won 300 with Flush"), history for late joiners, 140-char limit, rate limit, swear-word masking, names from the login (tested) |
+| Extra: emote reactions (stand-alone module) | `poker-server/src/reactions/` + `Assets/Scripts/Reactions/`: 12 emotes; send to everyone (pops over your seat) or throw at one player (flies across the table); open from the Emotes button, the chat window, or by clicking a player; table members only, rate limited (tested, including on a bare Socket.IO server) |
 | Optional: tests for ranking and pots | `test/handEvaluator.test.js`, `test/pots.test.js` (+ hand, table, bots, stats, e2e) |
 
 ---
@@ -285,7 +286,7 @@ editor tool, so the scenes are reproducible from code.
 above), plus the optional sound effects, dealing and chip animations, and automated
 tests for hand ranking and pot distribution. Extras: invite links and share sheet,
 waiting room, hand rankings hint, a WebGL build hosted by the server, joining a
-bots game by code (take a bot's seat after the hand), table chat, player profiles
+bots game by code (take a bot's seat after the hand), table chat, emote reactions, player profiles
 (avatar, display name, bio), a settings panel, and MongoDB storage.
 
 **Chat is a separate module.** `poker-server/src/chat/` never imports game code: the
@@ -296,6 +297,13 @@ chat file imports game code. In Unity, `Assets/Scripts/Chat/` (namespace
 `Poker.Chat`) has its own event names, models and client, and reaches the socket only
 through `NetworkManager.Listen/Send`. Removing chat means deleting those folders and
 two lines.
+
+**Reactions are a stand-alone module too, and reusable outside this game.**
+`poker-server/src/reactions/` imports nothing outside its folder; it is given
+`groupOf`, `roomOf` and `isInGroup`, so any app with "groups" (tables, rooms, lobbies)
+can use it. In Unity, `Assets/Scripts/Reactions/` uses no game or network code: the
+host implements `IReactionTransport` (its socket) and `IReactionScene` (where people
+are on screen). The poker table's glue is two small classes in `UI/Game/Reactions/`.
 
 **Left out:**
 - Private messages, muting or reporting a player in chat (table chat only).

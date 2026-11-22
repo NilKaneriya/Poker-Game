@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Poker.Core;
 using Poker.Network;
@@ -45,6 +46,10 @@ namespace Poker.UI.Game
         [SerializeField] private GameObject handRankRoot;
         [SerializeField] private TMP_Text handRankText;
 
+        [Header("Click")]
+        [Tooltip("Makes the name plate clickable (e.g. to send this player a reaction). Optional.")]
+        [SerializeField] private Button plateButton;
+
         [Header("Animation")]
         [Tooltip("Where hole cards are dealt from (the middle of the table).")]
         [SerializeField] private Transform dealOrigin;
@@ -56,7 +61,19 @@ namespace Poker.UI.Game
         /// <summary>Where this player's bet sits on the table.</summary>
         public Vector3 BetPosition => betRoot.transform.position;
 
+        /// <summary>The name plate was clicked.</summary>
+        public event Action<SeatView> Clicked;
+        /// <summary>Who sits here (null when empty).</summary>
+        public string PlayerId { get; private set; }
+        /// <summary>The name plate (avatar, name, chips).</summary>
+        public RectTransform Plate => (RectTransform)pulseTarget;
+
         private int shownChips = -1;
+
+        private void Awake()
+        {
+            if (plateButton != null) plateButton.onClick.AddListener(() => Clicked?.Invoke(this));
+        }
         private bool isTurn;
         private float turnEndsAt;
         private float turnDuration;
@@ -66,6 +83,7 @@ namespace Poker.UI.Game
             occupiedRoot.SetActive(false);
             emptyRoot.SetActive(true);
             shownChips = -1;
+            PlayerId = null;
             SetTurn(false, 0, 0);
             SetHandRank(null);
             foreach (var card in cards) card.Clear();
@@ -96,6 +114,7 @@ namespace Poker.UI.Game
             emptyRoot.SetActive(false);
             occupiedRoot.SetActive(true);
 
+            PlayerId = seat.playerId;
             nameText.text = seat.name;
             int avatar = Avatars.Clamp(seat.avatarId); // chosen in the profile (bots get one too)
             initialText.text = Avatars.Symbols[avatar];

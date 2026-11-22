@@ -118,6 +118,19 @@ Chat never imports game code (a unit test enforces this). `src/index.js` calls `
 | `ChatStore.js` | Last 50 messages per table, in memory; cleared when the table closes. |
 | `systemMessages.js` | Wording for "Bob joined the table", "Ava won 300 with Flush"... |
 
+### `src/reactions/`: emote reactions (a stand-alone module)
+Reactions import nothing outside their own folder (a unit test enforces this), so the folder can be copied into any Socket.IO server. `src/index.js` calls `attachReactions(io, { groupOf, roomOf, isInGroup })`; here a "group" is a table. A test runs the module on a bare Socket.IO server with no poker code at all.
+
+| File | Responsibility |
+|---|---|
+| `index.js` | `attachReactions`: one socket handler; broadcasts to the group's room, errors only to the sender. Optional `whoIs(socket)` for other login systems. |
+| `ReactionService.js` | The rules, with no networking: sender must be in a group, emote must be known, target must be in the same group, 4 per 6 s per player. |
+| `emotes.js` | The 12 emote ids (`laugh`, `wow`, `cool`, ... `gg`). Clients draw them with their own art. |
+| `reactionEvents.js` | Event names: `reactionSend`, `reaction`, `reactionError`. |
+| `RateLimiter.js` | The module's own copy, so it has no dependencies. |
+
+Reactions are not stored: they are a moment at the table, not history.
+
 The game side only publishes neutral events through `network/gameEvents.js` (player joined / waiting / seated / left, bot replaced, hand finished, table closed). It does not know who listens.
 
 ### `src/storage/`: player data (MongoDB or JSON files)
@@ -252,6 +265,21 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `ChatPanel` | "Chat" button with unread badge, message list, quick phrases, text box. |
 | `Editor/Chat/ChatPanelBuilder` | Builds the chat UI; the scene builder only calls `ChatPanelBuilder.Build(canvas, ...)`. |
 
+### Reactions (`Assets/Scripts/Reactions/`, namespace `Poker.Reactions`): a stand-alone module
+Uses only Unity, UI and TextMeshPro: no game, network or chat code. The host screen plugs it in through two interfaces.
+
+| Class | Responsibility |
+|---|---|
+| `ReactionInterfaces` | `IReactionTransport` (send/listen over the host's socket, local user id) and `IReactionScene` (where each user is on screen, who can be targeted). |
+| `ReactionClient` | Sends reactions and raises `Received` / `ErrorReceived`. One per transport, so scene reloads don't add listeners. |
+| `ReactionLayer` | Full-screen overlay: an emote pops over the sender, or is thrown in an arc to the target and lands with a bump. Unscaled time, max 10 on screen. |
+| `EmotePicker` | Pop-up: choose "Everyone" or one player, then tap one of the 12 emotes. Can be opened pre-aimed at a player. |
+| `EmoteSet` | ScriptableObject: emote id -> sprite (`Assets/Art/Reactions/EmoteSet.asset`). |
+| `ReactionConstants`, `ReactionModels` | Event names, emote ids, timings, texts; payload shapes. |
+| `Editor/Reactions/ReactionUIBuilder` | Imports the emote art, builds the layer, the picker and the buttons. |
+
+Game glue (`UI/Game/Reactions/`): `NetworkReactionTransport` adapts `NetworkManager`; `TableReactions` implements `IReactionScene` with the seats (anchor = name plate), opens the picker from the "Emotes" button, the button in the chat window, or a click on a player's plate (aimed at that player), and shows errors as a toast. Chat only offers an empty "tool slot" next to Send; it doesn't know what goes there.
+
 ### Profile and settings (client)
 | Class | Responsibility |
 |---|---|
@@ -300,7 +328,7 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 Every requirement in the task brief is mapped to its implementation in the README's **Requirements checklist**.
 
 **Done and verified**
-- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**, **table chat (separate module)**, **profiles and settings saved in MongoDB (or JSON files)**. **93 unit tests pass**, the storage tests also pass on a real MongoDB (`npm run test:mongo`), and the **end-to-end test** passes on both backends (`npm run test:e2e`, `npm run test:e2e:mongo`).
+- Server: rules engine, bots, accounts, tables, waiting room, host start, **join a bots table by code (take a bot's seat after the hand)**, **player statistics**, **reconnect grace period**, **WebGL hosting**, **table chat (separate module)**, **emote reactions (stand-alone module)**, **profiles and settings saved in MongoDB (or JSON files)**. **102 unit tests pass**, the storage tests also pass on a real MongoDB (`npm run test:mongo`), and the **end-to-end test** passes on both backends (`npm run test:e2e`, `npm run test:e2e:mongo`).
 - Client: all features are implemented, including stats in the lobby, the break reminder, split/side-pot results and the server-restart message. The code **compiles with 0 errors and 0 warnings** for Editor, WebGL and Android. The hand evaluator passes its **24 tests**, and all 20 generated sounds were checked.
 
 **Before submitting**

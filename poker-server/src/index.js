@@ -18,6 +18,7 @@ const { serveWebGL } = require('./network/webglHosting');
 const { tableRoom } = require('./network/broadcast');
 const gameEvents = require('./network/gameEvents');
 const { attachChat } = require('./chat');
+const { attachReactions } = require('./reactions');
 
 async function main() {
   // 1. Storage first: nothing can log in or save stats without it.
@@ -49,6 +50,13 @@ async function main() {
     tableOf: (playerId) => tables.findByPlayer(playerId)?.code ?? null,
     roomOf: tableRoom,
     gameEvents,
+  });
+
+  // Reactions (emotes) are another stand-alone module: a "group" here is a table.
+  attachReactions(io, {
+    groupOf: (playerId) => tables.findByPlayer(playerId)?.code ?? null,
+    roomOf: tableRoom,
+    isInGroup: (code, playerId) => tables.get(code)?.hasMember(playerId) ?? false,
   });
 
   server.listen(config.port, () => {

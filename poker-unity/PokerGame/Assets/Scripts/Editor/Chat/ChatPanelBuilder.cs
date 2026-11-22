@@ -16,7 +16,13 @@ namespace Poker.EditorTools.Chat
         private static readonly Vector2 BottomLeft = new Vector2(0f, 0f);
 
         /// <summary>"Chat" button at (buttonX, margin) from the bottom-left; the window opens above it.</summary>
-        public static ChatPanel Build(Transform canvas, float buttonX, float margin)
+        public static ChatPanel Build(Transform canvas, float buttonX, float margin) => Build(canvas, buttonX, margin, out _);
+
+        /// <param name="toolSlot">
+        /// An empty square next to the Send button where another module can put its own button
+        /// (e.g. emotes). Chat doesn't know or care what goes there.
+        /// </param>
+        public static ChatPanel Build(Transform canvas, float buttonX, float margin, out RectTransform toolSlot)
         {
             var root = Node("Chat", canvas).Fill();
 
@@ -68,7 +74,8 @@ namespace Poker.EditorTools.Chat
 
             // Input + send
             var input = MakeInput(window.transform, "Input", Texts.Placeholder, 22);
-            input.GetComponent<RectTransform>().Pin(BottomLeft, 15, 16, 400, 60);
+            input.GetComponent<RectTransform>().Pin(BottomLeft, 15, 16, 330, 60);
+            toolSlot = Node("ToolSlot", window.transform).Pin(BottomLeft, 353, 16, 64, 60);
             input.lineType = TMP_InputField.LineType.SingleLine;
             var send = MakeButton(window.transform, "SendButton", Texts.Send, Theme.Green, Theme.Dark, 24);
             send.GetComponent<RectTransform>().Pin(BottomLeft, 425, 16, 120, 60);

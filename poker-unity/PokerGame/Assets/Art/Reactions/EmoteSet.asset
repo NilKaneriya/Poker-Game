@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 835eae9a515894948bf5307dcec6beb6, type: 3}
+  m_Name: EmoteSet
+  m_EditorClassIdentifier: 
+  entries:
+  - id: laugh
+    sprite: {fileID: 21300000, guid: 065fe177440324c4a8a1732b7692be5e, type: 3}
+  - id: wow
+    sprite: {fileID: 21300000, guid: 6c66e565455c4cd4e8a353397d56dbd9, type: 3}
+  - id: cool
+    sprite: {fileID: 21300000, guid: 4b366f026262f2948b958181804987a8, type: 3}
+  - id: love
+    sprite: {fileID: 21300000, guid: 666a8583b8bd4254f9a90043e6a9f1ab, type: 3}
+  - id: angry
+    sprite: {fileID: 21300000, guid: b5aef365451546946b13afb5c4de85cf, type: 3}
+  - id: cry
+    sprite: {fileID: 21300000, guid: d60ca73d197c23b48a3eadc2abeb6917, type: 3}
+  - id: wink
+    sprite: {fileID: 21300000, guid: 83f2fb48cef8d2e45a977ae30dfcecef, type: 3}
+  - id: sleepy
+    sprite: {fileID: 21300000, guid: 5430bca8cf1165b4dae9034c18070254, type: 3}
+  - id: heart
+    sprite: {fileID: 21300000, guid: 7370fd016b455f64a9dd25b077b660d6, type: 3}
+  - id: fire
+    sprite: {fileID: 21300000, guid: 9a296e99ff46bbb4780a5fd540b4a586, type: 3}
+  - id: coin
+    sprite: {fileID: 21300000, guid: d6a823f089f70354dac009218895f0ab, type: 3}
+  - id: gg
+    sprite: {fileID: 21300000, guid: 25155ed292109d84c88bfc782e3e32e6, type: 3}

@@ -2,6 +2,7 @@ using System.IO;
 using Poker.Core;
 using Poker.EditorTools.Audio;
 using Poker.EditorTools.Chat;
+using Poker.EditorTools.Reactions;
 using Poker.UI;
 using Poker.UI.Game;
 using Poker.UI.Lobby;
@@ -633,6 +634,10 @@ namespace Poker.EditorTools
             var chipAnimator = chipLayer.gameObject.AddComponent<ChipAnimator>();
             Wire(chipAnimator, "chipTemplate", chipTemplate.rectTransform);
 
+            // Reactions module: emotes pop over seats / fly between them, above seats and chips.
+            var emoteSet = ReactionUIBuilder.LoadEmoteSet();
+            var reactionLayer = ReactionUIBuilder.BuildLayer(canvas, emoteSet);
+
             // "THE FLOP" etc., under the board for a moment when a street starts.
             var stageBannerBg = Card(canvas, "StageBanner", Theme.Dark.WithAlpha(0.85f), 30f);
             stageBannerBg.rectTransform.At(0, -160, 460, 74);
@@ -675,9 +680,12 @@ namespace Poker.EditorTools
             // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
             var rankingsButton = MakeButton(canvas, "HandRankingsButton", "♠  Hand rankings", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 24);
             rankingsButton.GetComponent<RectTransform>().Pin(new Vector2(0f, 0f), 28, 28, 250, 60);
-            var chat = ChatPanelBuilder.Build(canvas, buttonX: 296, margin: 28); // chat module: button next to the rankings hint
+            var chat = ChatPanelBuilder.Build(canvas, buttonX: 296, margin: 28, out RectTransform chatToolSlot); // chat module: button next to the rankings hint
+            var tableEmoteButton = ReactionUIBuilder.BuildOpenButton(canvas, emoteSet, new Vector2(0f, 0f), 484, 28);
+            var chatEmoteButton = ReactionUIBuilder.BuildIconButton(chatToolSlot, emoteSet); // emotes from inside the chat window
             var rankings = BuildHandRankingsPanel(canvas);
             ProfileUIBuilder.BuildSettingsPanel(canvas, gameSettings);
+            var emotePicker = ReactionUIBuilder.BuildPicker(canvas, emoteSet); // on top of everything
 
             AddSceneMusic(SoundId.MusicTable);
             var controller = AddController<GameController>("GameController");
@@ -714,6 +722,14 @@ namespace Poker.EditorTools
             Wire(controller, "toast", toast);
             Wire(controller, "chat", chat);
 
+            // Glue between the reactions module and this table (seats as anchors and targets).
+            var reactions = controller.gameObject.AddComponent<TableReactions>();
+            Wire(reactions, "seats", seatsView);
+            Wire(reactions, "layer", reactionLayer);
+            Wire(reactions, "picker", emotePicker);
+            WireArray(reactions, "openButtons", new Object[] { tableEmoteButton, chatEmoteButton });
+            Wire(reactions, "toast", toast);
+
             return Save(scene, SceneNames.Game);
         }
 
@@ -749,6 +765,9 @@ namespace Poker.EditorTools
             // Name plate with avatar and timer ring
             var body = Card(occupied, "Body", Theme.Panel.WithAlpha(0.95f), 48f);
             body.rectTransform.At(0, -22, 276, 96);
+            body.raycastTarget = true; // click a player's plate to send them a reaction
+            var plateButton = body.gameObject.AddComponent<Button>();
+            plateButton.transition = Selectable.Transition.None;
             var ring = Img(body.transform, "TimerRing", UISprites.Ring, Theme.Green);
             ring.rectTransform.Pin(new Vector2(0f, 0.5f), -8, 0, 98, 98);
             ring.type = Image.Type.Filled;
@@ -824,6 +843,7 @@ namespace Poker.EditorTools
             Wire(view, "turnGlow", glow.gameObject);
             Wire(view, "timerRing", ring);
             Wire(view, "pulseTarget", body.transform);
+            Wire(view, "plateButton", plateButton);
             if (handRank != null)
             {
                 Wire(view, "handRankRoot", handRank);
