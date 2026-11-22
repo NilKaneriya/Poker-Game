@@ -1,7 +1,7 @@
 const EVENTS = require('./events');
 const tables = require('../services/TableManager');
 const stats = require('../services/StatsService');
-const { buildPlayerView } = require('./playerView');
+const { buildPlayerView } = require('../game/playerView');
 const log = require('../utils/logger');
 
 const playerRoom = (playerId) => `player:${playerId}`;

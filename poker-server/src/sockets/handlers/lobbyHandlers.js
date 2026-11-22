@@ -5,10 +5,10 @@ const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
 const handHistory = require('../../services/HandHistoryService');
 const { tableRoom, sendTableList, sendStats } = require('../broadcast');
-const gameEvents = require('../gameEvents');
+const gameEvents = require('../../game/gameEvents');
 const { GAME_EVENTS } = gameEvents;
-const { runnerFor } = require('../TableRunner');
-const { removeFromTable } = require('../seating');
+const { runnerFor } = require('../../game/TableRunner');
+const { removeFromTable } = require('../../game/seating');
 
 const MAX_TABLE_NAME_LENGTH = 24;
 const VALID_MODES = new Set(Object.values(TABLE_MODES));

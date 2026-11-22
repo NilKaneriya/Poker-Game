@@ -4,8 +4,8 @@ const { defaultAvatarFor } = require('../services/profileRules');
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
 const { playerRoom, tableRoom, sendStats } = require('./broadcast');
-const { runnerFor } = require('./TableRunner');
-const { startGrace, cancelGrace } = require('./reconnectGrace');
+const { runnerFor } = require('../game/TableRunner');
+const { startGrace, cancelGrace } = require('../game/reconnectGrace');
 const registerLobbyHandlers = require('./handlers/lobbyHandlers');
 const registerGameHandlers = require('./handlers/gameHandlers');
 

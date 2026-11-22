@@ -28,18 +28,31 @@ src/
     pots.js              Main/side pots and payouts
     HoldemHand.js        One hand: blinds -> streets -> showdown
     Table.js             Seats, stacks, dealer button
-  network/
-    authRoutes.js        Register / login / auto-login / logout (HTTP)
-    socketServer.js      Token check on connect, reconnect to seat
-    events.js            Event names (mirrored in Unity PokerEvents.cs)
-    playerView.js        What each player is allowed to see
-    broadcast.js         Sending state to tables/players
+  game/                  Running tables over time
+    TableRunner.js       Turns, bots, result pause, next hand
     TurnTimer.js         Per-turn countdown
+    playerView.js        What each player is allowed to see
+    seating.js           Leaving a table, closing empty tables
+    reconnectGrace.js    Seat kept for a while after a disconnect
+    gameEvents.js        Game event bus (chat listens)
+  sockets/               Socket.IO
+    socketServer.js      Token check on connect, reconnect to seat
+    events.js            Event names (mirrored in Unity Constants.PokerEvents)
+    broadcast.js         Sending state to tables/players
+    profileSync.js       Live name/avatar after a profile edit
     handlers/            Lobby and in-game event handlers
+  http/                  Express routes
+    authRoutes.js        Register / login / auto-login / logout
+    profileRoutes.js     Profile and settings
+    webglHosting.js      Serves the Unity WebGL build
   services/
     TableManager.js      Tables by join code
     AccountStore.js      Accounts (scrypt passwords) and login tokens
+    ProfileService.js    Profiles and settings
     StatsService.js      Player statistics
+    HandHistoryService.js  Last 30 hands per player (record built by handRecord.js)
+  storage/               MongoDB or JSON files, same API
+  chat/, reactions/      Stand-alone feature modules
   bots/BotPlayer.js      Computer opponents
 ```
 

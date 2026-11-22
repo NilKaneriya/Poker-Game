@@ -1,7 +1,7 @@
 const config = require('../config');
 const log = require('../utils/logger');
 const TurnTimer = require('./TurnTimer');
-const { sendTableState, sendTableList, sendStats } = require('./broadcast');
+const { sendTableState, sendTableList, sendStats } = require('../sockets/broadcast');
 const gameEvents = require('./gameEvents');
 const { GAME_EVENTS } = gameEvents;
 const stats = require('../services/StatsService');

@@ -3,7 +3,7 @@ const { TABLE_MODES } = require('./constants');
 
 /**
  * A poker table: seats, chip stacks, the dealer button and the current hand.
- * Knows nothing about sockets or timers; the network layer drives it.
+ * Knows nothing about sockets or timers; the game layer (src/game) drives it.
  *
  * Seat chips always show what a player has *behind* (not in the pot). While a
  * hand runs they are synced from the hand after every action.

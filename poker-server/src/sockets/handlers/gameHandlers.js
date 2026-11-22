@@ -1,7 +1,7 @@
 const EVENTS = require('../events');
 const { ACTIONS } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
-const { runnerFor } = require('../TableRunner');
+const { runnerFor } = require('../../game/TableRunner');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 

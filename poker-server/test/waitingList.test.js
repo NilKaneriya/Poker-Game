@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Table = require('../src/engine/Table');
 const { TABLE_MODES } = require('../src/engine/constants');
-const { runnerFor, removeRunner } = require('../src/network/TableRunner');
+const { runnerFor, removeRunner } = require('../src/game/TableRunner');
 
 // The runner only needs io to broadcast; these tests call manageBots() directly.
 const fakeIo = { to: () => ({ emit() {} }), emit() {} };

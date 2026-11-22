@@ -1,5 +1,5 @@
 const tables = require('../services/TableManager');
-const { runnerFor } = require('./TableRunner');
+const { runnerFor } = require('../game/TableRunner');
 
 /**
  * A player saved a new name or avatar. Show it right away everywhere they already are:

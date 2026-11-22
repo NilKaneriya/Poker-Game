@@ -63,7 +63,7 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 | **Single responsibility** | Each class has one job (see sections 5 and 6). `GameController` only coordinates; seats, board, panels, presenters and animators each own one part of the screen. |
 | **Static data in one place** | All constants, texts, colours, timings, layouts and the hand chart live in `Constants.cs`. All data shapes live in `DataModel.cs`. No magic values spread across classes. |
 | **Names match on both sides** | Event names (`createTable`, `tableState`...), action ids, stages, table modes and hand names are identical on server and client, and each file points to its counterpart. |
-| **Pure engine, thin network layer** | `Table` and `HoldemHand` have no sockets or timers, so they are unit-tested directly. `TableRunner` decides *when* things happen; the engine decides *what* is allowed. |
+| **Pure engine, thin layers around it** | `Table` and `HoldemHand` have no sockets or timers, so they are unit-tested directly. `TableRunner` decides *when* things happen; the engine decides *what* is allowed. |
 
 ---
 
@@ -79,21 +79,45 @@ A multiplayer Texas Hold'em game played with **virtual chips only** (no real mon
 | `HoldemHand.js` | One hand from blinds to showdown: legal actions, betting rules (min-raise, all-in), streets, timeouts, fold-wins, showdown. |
 | `Table.js` | Seats, chip stacks, dealer button, starting hands, rebuy. Also holds lobby metadata: `mode`, `started`, `hostId` (host passes on if they leave). |
 
-### `src/network/`: Socket.IO layer
+### Server folder rules
+| Folder | Holds | May import |
+|---|---|---|
+| `engine/` | Poker rules (pure: no I/O, timers or sockets) | nothing outside `engine/` |
+| `game/` | Running tables over time: turns, bots, seating, reconnects, per-player views, the game event bus | `engine/`, `bots/`, `services/`, and `sockets/broadcast.js` (its one way to reach clients) |
+| `sockets/` | Socket.IO: login handshake, event handlers, sending state | `game/`, `services/`, `engine/constants.js` |
+| `http/` | Express routes and WebGL hosting | `services/` |
+| `services/` | Accounts, profiles, stats, hand history, table list | `engine/`, `storage/` |
+| `storage/` | MongoDB / JSON collections behind one API | nothing |
+| `chat/`, `reactions/` | Stand-alone feature modules | only their own folder (tests enforce it) |
+
+Every folder may use `config.js` and `utils/`. File names: a file that exports a class is `PascalCase.js`; a file that exports functions is `camelCase.js`. Services export one shared instance plus the class (for tests). Style is checked by ESLint and formatting by Prettier (`npm run lint`).
+
+### `src/sockets/`: Socket.IO layer
 | File | Responsibility |
 |---|---|
 | `socketServer.js` | Rejects sockets without a valid token; sends `session` (with the table you are at, or none after a restart) and your stats; puts reconnecting players back at their table; starts the grace period on disconnect. |
 | `handlers/lobbyHandlers.js` | `createTable` (validates mode and seat count 2-6), `joinTable` (bots tables: joins the waiting list, seated after the current hand), `leaveTable`, `listTables`, `startGame` (host only). |
 | `handlers/gameHandlers.js` | `playerAction` (validated by the engine), `rebuy`. |
+| `broadcast.js` | Sends every seated human their own view; sends the table list. |
+| `events.js` | Every event name, in one place. |
+| `profileSync.js` | After a profile edit: update the player's sockets (chat name) and their seat at the table at once. |
+
+### `src/game/`: running tables over time
+| File | Responsibility |
+|---|---|
 | `TableRunner.js` | Runs a table over time: **waiting room** (starts when full or when the host starts), turn timer, bot moves, result pause, next hand. Fills bots tables with bots; between hands swaps a bot out for each waiting human. |
 | `playerView.js` | Builds what one specific player may see. The single gate for hidden information. |
-| `broadcast.js` | Sends every seated human their own view; sends the table list. |
+| `gameEvents.js` | Event bus: the game publishes "player joined", "hand finished"...; chat listens. |
 | `TurnTimer.js` | One countdown per table; exposes time left so clients draw their own ring. |
 | `seating.js` | Takes a player off a table (fold if in a hand, pass on host, close empty tables). Used by Leave and by the reconnect grace. |
 | `reconnectGrace.js` | Keeps a disconnected player's seat for 2 minutes, then frees it. |
+
+### `src/http/`: Express routes
+| File | Responsibility |
+|---|---|
 | `webglHosting.js` | Serves a Unity WebGL build from the server (one address for game and server). |
 | `authRoutes.js` | Register, login, `/auth/me`, logout; simple rate limit against brute force. |
-| `events.js` | Every event name, in one place. |
+| `profileRoutes.js` | `GET /profile/me`, `PUT /profile`, `PUT /profile/settings` (login token required). |
 
 ### `src/services/`
 | File | Responsibility |
@@ -133,7 +157,7 @@ Reactions import nothing outside their own folder (a unit test enforces this), s
 
 Reactions are not stored: they are a moment at the table, not history.
 
-The game side only publishes neutral events through `network/gameEvents.js` (player joined / waiting / seated / left, bot replaced, hand finished, table closed). It does not know who listens.
+The game side only publishes neutral events through `game/gameEvents.js` (player joined / waiting / seated / left, bot replaced, hand finished, table closed). It does not know who listens.
 
 ### `src/storage/`: player data (MongoDB or JSON files)
 | File | Responsibility |
@@ -144,7 +168,7 @@ The game side only publishes neutral events through `network/gameEvents.js` (pla
 
 Services get collections through `attach(storage)` at start-up (`src/index.js`), so tests can hand them an in-memory store.
 
-### Profile and settings (`src/services/`, `src/network/`)
+### Profile and settings (`src/services/`, `src/http/`, `src/sockets/`)
 | File | Responsibility |
 |---|---|
 | `profileRules.js` | Pure rules: display name, avatar (0-11), bio (80 chars), settings schema with types, ranges and defaults. |

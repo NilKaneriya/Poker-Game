@@ -9,7 +9,7 @@ const CARDS_FOR_STAGE = { [STAGES.FLOP]: 3, [STAGES.TURN]: 1, [STAGES.RIVER]: 1 
 
 /**
  * One hand of Texas Hold'em, from posting blinds to showdown.
- * Pure game state: no timers, sockets or I/O. The table/network layer calls
+ * Pure game state: no timers, sockets or I/O. The game layer (src/game) calls
  * applyAction() and reads the state back; every rule check happens here.
  *
  * Betting terms used below:

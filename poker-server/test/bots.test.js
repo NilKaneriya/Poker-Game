@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const Table = require('../src/engine/Table');
 const { BotPlayer, LEVELS, handStrength } = require('../src/bots/BotPlayer');
-const { buildPlayerView } = require('../src/network/playerView');
+const { buildPlayerView } = require('../src/game/playerView');
 
 test('hand strength: pocket aces beat 7-2 pre-flop, a flush beats a pair after', () => {
   assert.ok(handStrength(['Ah', 'Ad'], []) > handStrength(['7c', '2d'], []));

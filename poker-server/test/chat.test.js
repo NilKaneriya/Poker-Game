@@ -5,7 +5,7 @@ const RateLimiter = require('../src/chat/RateLimiter');
 const ChatStore = require('../src/chat/ChatStore');
 const { EventEmitter } = require('events');
 const { attachChat } = require('../src/chat');
-const { GAME_EVENTS } = require('../src/network/gameEvents');
+const { GAME_EVENTS } = require('../src/game/gameEvents');
 
 test('chat text: trimmed, spaces collapsed, line breaks and control characters removed', () => {
   assert.equal(cleanChatText('  nice \n\n hand\t\u0007 ', 140), 'nice hand');
@@ -82,7 +82,7 @@ test('chat module is separate: it never imports game code', () => {
     const source = fs.readFileSync(path.join(dir, file), 'utf8');
     const imports = [...source.matchAll(/require\('([^']+)'\)/g)].map((m) => m[1]);
     for (const target of imports) {
-      assert.ok(!/engine|network|services/.test(target), `${file} imports game code: ${target}`);
+      assert.ok(!/engine|game|sockets|http|services|bots/.test(target), `${file} imports game code: ${target}`);
     }
   }
 });

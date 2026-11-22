@@ -1,6 +1,6 @@
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
-const { sendTableList } = require('./broadcast');
+const { sendTableList } = require('../sockets/broadcast');
 const gameEvents = require('./gameEvents');
 const { GAME_EVENTS } = gameEvents;
 const { runnerFor, removeRunner } = require('./TableRunner');

@@ -144,7 +144,7 @@ action and deciding winners happen only on the server. Clients send intentions
 (`fold`, `raise to 120`) and receive state; they never send results.
 
 **Hidden information never leaves the server.** Every state message is built per
-player in `network/playerView.js`, the single place where state becomes a client
+player in `game/playerView.js`, the single place where state becomes a client
 payload. You get your own hole cards; others' cards are added only when shown at
 showdown. Bots receive exactly the same filtered view as a human in their seat.
 
@@ -174,7 +174,7 @@ whitelisted and typed. Unknown fields are never stored.
 (works offline and before login) and `ProfileManager` saves player changes to the
 account a moment later. On login the account's settings replace the device's, except the
 first time, when the device's choices are uploaded. A profile edit shows at once on the
-player's seat and in chat (`network/profileSync.js`).
+player's seat and in chat (`sockets/profileSync.js`).
 
 **Tables: two modes.** *Play with friends* tables wait in a waiting room until every
 seat is filled (or the host starts), so everyone starts together. *Play vs bots*
@@ -210,7 +210,7 @@ editor tool, so the scenes are reproducible from code.
 |---|---|
 | Create a table, join by code or from a list | Lobby: create (mode + 2-6 seats), 5-letter code, open-tables list, invite links |
 | Server-authoritative shuffle, deal, winner | `engine/cards.js` (crypto shuffle), `HoldemHand.js`, `handEvaluator.js`, `pots.js` |
-| Nobody sees opponents' cards | `network/playerView.js`; tested ("public snapshot never contains hole cards", bots peek test) |
+| Nobody sees opponents' cards | `game/playerView.js`; tested ("public snapshot never contains hole cards", bots peek test) |
 | Real-time sync, secrets hidden per player | Per-player `tableState` after every change (`broadcast.js`) |
 | Turn timer, auto fold (or check) | `TurnTimer.js` + `HoldemHand.actOnTimeout`; 30 s, ring on the active seat, ticking in the last 5 s |
 | Join / leave mid-hand | Joiners watch until the next hand; leavers are folded, bets stay in the pot (tested) |
@@ -291,7 +291,7 @@ bots game by code (take a bot's seat after the hand), table chat, emote reaction
 (avatar, display name, bio), a settings panel, and MongoDB storage.
 
 **Chat is a separate module.** `poker-server/src/chat/` never imports game code: the
-game publishes neutral events (`network/gameEvents.js`: player joined, hand
+game publishes neutral events (`game/gameEvents.js`: player joined, hand
 finished...), and `src/index.js` passes chat the three things it needs (which table a
 player is at, the table's socket room, and those events). A unit test fails if any
 chat file imports game code. In Unity, `Assets/Scripts/Chat/` (namespace
@@ -321,11 +321,14 @@ are on screen). The poker table's glue is two small classes in `UI/Game/Reaction
 ```
 poker-server/              Node game server (server-authoritative)
   src/engine/              Pure poker rules: cards, hand evaluation, pots, hand/table state
-  src/network/             Socket.IO handlers, per-player views, turn timer, reconnect grace,
-                           WebGL hosting
-  src/services/            Tables, accounts + login tokens, profiles + settings, player stats
+  src/game/                Running tables over time: turns, bots, seating, reconnect grace,
+                           per-player views, game event bus
+  src/sockets/             Socket.IO handshake, event handlers, sending state
+  src/http/                Login and profile routes, WebGL hosting
+  src/services/            Tables, accounts + login tokens, profiles + settings, stats, hand history
   src/storage/             MongoDB or JSON-file collections behind one interface
-  src/chat/                Table chat (separate module)
+  src/chat/                Table chat (stand-alone module)
+  src/reactions/           Emote reactions (stand-alone module)
   src/bots/                Computer opponents (3 levels)
   test/                    Unit tests (node:test)
   scripts/                 End-to-end test, bot game viewer
