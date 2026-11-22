@@ -142,9 +142,16 @@ namespace Poker.EditorTools
             scaler.matchWidthOrHeight = 0.5f;
 
             Transform canvas = canvasGo.transform;
-            Img(canvas, "Background", null, Theme.Background).rectTransform.Fill();
-            var light = Img(canvas, "Spotlight", UISprites.Glow, Theme.Blue.WithAlpha(0.18f));
+            var background = Img(canvas, "Background", UISprites.Backdrop, Color.white);
+            background.type = Image.Type.Simple;
+            background.rectTransform.Fill();
+            var light = Img(canvas, "Spotlight", UISprites.Glow, Theme.Blue.WithAlpha(0.2f));
             light.rectTransform.At(0, 60, 2200, 1500);
+            var warm = Img(canvas, "WarmLight", UISprites.Glow, Theme.Gold.WithAlpha(0.05f));
+            warm.rectTransform.At(0, -200, 1800, 900);
+            var vignette = Img(canvas, "Vignette", UISprites.Vignette, Color.white);
+            vignette.type = Image.Type.Simple;
+            vignette.rectTransform.Fill(-40, -40, -40, -40);
             return canvas;
         }
 
@@ -183,7 +190,7 @@ namespace Poker.EditorTools
             var root = Node("BreakReminder", canvas).Fill();
             var group = Group(root, 0f);
             Img(root, "Dim", null, Color.black.WithAlpha(0.6f), raycast: true).rectTransform.Fill();
-            var card = Panel(root, "Card", Theme.Panel, 30f);
+            var card = Card(root, "Card", Theme.Panel, 30f);
             card.rectTransform.At(0, 0, 760, 380);
             Panel(card.transform, "HeaderBar", Theme.Green, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 260, 12);
             MakeText(card.transform, "Title", WellbeingTexts.Title, 44, Theme.Text, bold: true).rectTransform.At(0, 110, 680, 60);
@@ -206,7 +213,7 @@ namespace Poker.EditorTools
         /// <summary>Hidden message pill; anchor (0.5,1) = top centre, (0.5,0) = bottom centre.</summary>
         private static ToastView BuildToast(Transform canvas, Vector2 anchor, float y)
         {
-            var bg = Panel(canvas, "Toast", Theme.Dark.WithAlpha(0.95f), 30f);
+            var bg = Card(canvas, "Toast", Theme.Dark.WithAlpha(0.95f), 30f);
             bg.rectTransform.Pin(anchor, 0, y, 640, 64);
             Group(bg, 0f); // invisible until ToastView.Show
             var text = MakeText(bg.transform, "Message", "Message", 24, Theme.Text);
@@ -341,7 +348,7 @@ namespace Poker.EditorTools
             retry.gameObject.SetActive(false);
 
             // Login form
-            var login = Panel(canvas, "LoginForm", Theme.Panel, 26f);
+            var login = Card(canvas, "LoginForm", Theme.Panel, 26f);
             login.rectTransform.At(0, -175, 620, 600);
             var loginGroup = Group(login, 0f);
             MakeText(login.transform, "Header", "Sign in to play", 40, Theme.Text, bold: true).rectTransform.At(0, 240, 560, 56);
@@ -388,7 +395,7 @@ namespace Poker.EditorTools
 
         private static TableListItemView BuildTableListItemPrefab()
         {
-            var row = Panel(null, "TableListItem", Theme.PanelLight, 18f);
+            var row = Card(null, "TableListItem", Theme.PanelLight, 18f);
             row.rectTransform.sizeDelta = new Vector2(1000, 100);
             row.gameObject.AddComponent<LayoutElement>().preferredHeight = 100;
 
@@ -426,6 +433,11 @@ namespace Poker.EditorTools
             top.rectTransform.anchorMax = new Vector2(1f, 1f);
             top.rectTransform.pivot = new Vector2(0.5f, 1f);
             top.rectTransform.sizeDelta = new Vector2(0, 110);
+            var topLine = Img(top.transform, "GoldLine", null, Theme.Gold.WithAlpha(0.35f));
+            topLine.rectTransform.anchorMin = new Vector2(0f, 0f);
+            topLine.rectTransform.anchorMax = new Vector2(1f, 0f);
+            topLine.rectTransform.pivot = new Vector2(0.5f, 0f);
+            topLine.rectTransform.sizeDelta = new Vector2(0f, 2f);
             var title = MakeText(top.transform, "Title", "TEXAS HOLD'EM", 46, Theme.Gold, TextAlignmentOptions.Left, bold: true);
             title.rectTransform.Pin(new Vector2(0f, 0.5f), 48, 0, 600, 70);
             var logout = MakeButton(top.transform, "LogoutButton", "Log out", Theme.PanelLight, Theme.Text, 22);
@@ -436,7 +448,7 @@ namespace Poker.EditorTools
             var lobbySettings = ProfileUIBuilder.BuildSettingsButton(top.transform, new Vector2(1f, 0.5f), -840, 0);
 
             // Left column: create, join, how it works
-            var create = Panel(canvas, "CreateCard", Theme.Panel, 24f);
+            var create = Card(canvas, "CreateCard", Theme.Panel, 24f);
             create.rectTransform.At(-590, 225, 640, 380);
             MakeText(create.transform, "Title", "Create a table", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 150, 560, 46);
 
@@ -473,7 +485,7 @@ namespace Poker.EditorTools
             var createButton = MakeButton(create.transform, "CreateButton", "Create", Theme.Gold, Theme.Dark, 28);
             createButton.GetComponent<RectTransform>().At(195, -132, 170, 70);
 
-            var join = Panel(canvas, "JoinCard", Theme.Panel, 24f);
+            var join = Card(canvas, "JoinCard", Theme.Panel, 24f);
             join.rectTransform.At(-590, -105, 640, 220);
             MakeText(join.transform, "Title", "Join with a code", 34, Theme.Text, TextAlignmentOptions.Left, bold: true).rectTransform.At(0, 66, 560, 46);
             MakeText(join.transform, "Hint", "Got a 5-letter room code or invite from a friend?", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 24, 560, 32);
@@ -486,7 +498,7 @@ namespace Poker.EditorTools
             joinButton.GetComponent<RectTransform>().At(195, -48, 170, 70);
 
             // Your stats (the one retention feature: facts only, no goals or streaks)
-            var statsCard = Panel(canvas, "StatsCard", Theme.Panel.WithAlpha(0.6f), 24f);
+            var statsCard = Card(canvas, "StatsCard", Theme.Panel.WithAlpha(0.6f), 24f);
             statsCard.rectTransform.At(-590, -337, 640, 176);
             MakeText(statsCard.transform, "Title", LobbyTexts.StatsTitle, 26, Theme.Gold, TextAlignmentOptions.Left, bold: true)
                 .rectTransform.At(0, 56, 560, 36);
@@ -514,7 +526,7 @@ namespace Poker.EditorTools
                 .rectTransform.Pin(new Vector2(0f, 0f), 350, 22, 620, 46);
 
             // Right: open tables
-            var tables = Panel(canvas, "TablesPanel", Theme.Panel, 24f);
+            var tables = Card(canvas, "TablesPanel", Theme.Panel, 24f);
             tables.rectTransform.At(330, -40, 1100, 820);
             MakeText(tables.transform, "Title", "Open tables", 34, Theme.Text, TextAlignmentOptions.Left, bold: true)
                 .rectTransform.Pin(new Vector2(0f, 1f), 32, -26, 500, 50);
@@ -588,7 +600,7 @@ namespace Poker.EditorTools
                 boardCards[i].GetComponent<RectTransform>().anchoredPosition = new Vector2((i - 2) * 126, 0);
             }
 
-            var pot = Panel(canvas, "Pot", Theme.Dark.WithAlpha(0.75f), 26f);
+            var pot = Card(canvas, "Pot", Theme.Dark.WithAlpha(0.75f), 26f);
             pot.rectTransform.At(0, 150, 260, 52);
             var potChip = Img(pot.transform, "Chip", UISprites.Circle, Theme.Gold);
             potChip.rectTransform.Pin(new Vector2(0f, 0.5f), 14, 0, 30, 30);
@@ -622,7 +634,7 @@ namespace Poker.EditorTools
             Wire(chipAnimator, "chipTemplate", chipTemplate.rectTransform);
 
             // "THE FLOP" etc., under the board for a moment when a street starts.
-            var stageBannerBg = Panel(canvas, "StageBanner", Theme.Dark.WithAlpha(0.85f), 30f);
+            var stageBannerBg = Card(canvas, "StageBanner", Theme.Dark.WithAlpha(0.85f), 30f);
             stageBannerBg.rectTransform.At(0, -160, 460, 74);
             var stageBannerGroup = Group(stageBannerBg, 0f);
             var stageBannerText = MakeText(stageBannerBg.transform, "Label", "THE FLOP", 44, Theme.Gold, bold: true);
@@ -635,7 +647,7 @@ namespace Poker.EditorTools
             var waitingRoom = BuildWaitingRoom(canvas);
 
             // Header: table info + code (left), connection + leave (right)
-            var header = Panel(canvas, "TableInfo", Theme.Dark.WithAlpha(0.8f), 22f);
+            var header = Card(canvas, "TableInfo", Theme.Dark.WithAlpha(0.8f), 22f);
             header.rectTransform.Pin(new Vector2(0f, 1f), 28, -24, 600, 112);
             var tableName = MakeText(header.transform, "TableName", "Table", 32, Theme.Text, TextAlignmentOptions.Left, bold: true);
             tableName.rectTransform.Pin(new Vector2(0f, 1f), 24, -14, 340, 44);
@@ -735,7 +747,7 @@ namespace Poker.EditorTools
             }
 
             // Name plate with avatar and timer ring
-            var body = Panel(occupied, "Body", Theme.Panel.WithAlpha(0.95f), 48f);
+            var body = Card(occupied, "Body", Theme.Panel.WithAlpha(0.95f), 48f);
             body.rectTransform.At(0, -22, 276, 96);
             var ring = Img(body.transform, "TimerRing", UISprites.Ring, Theme.Green);
             ring.rectTransform.Pin(new Vector2(0f, 0.5f), -8, 0, 98, 98);
@@ -823,7 +835,7 @@ namespace Poker.EditorTools
 
         private static ActionBar BuildActionBar(Transform canvas)
         {
-            var bar = Panel(canvas, "ActionBar", Theme.Dark.WithAlpha(0.92f), 26f);
+            var bar = Card(canvas, "ActionBar", Theme.Dark.WithAlpha(0.92f), 26f);
             bar.rectTransform.Pin(new Vector2(1f, 0f), -28, 28, 680, 210);
             var group = Group(bar);
 
@@ -875,7 +887,7 @@ namespace Poker.EditorTools
             var group = Group(root, 0f);
             var glow = Img(root, "Glow", UISprites.Glow, Theme.Gold.WithAlpha(0.18f));
             glow.rectTransform.At(0, 0, 1300, 800);
-            Panel(root, "Background", Theme.Dark.WithAlpha(0.93f), 30f).rectTransform.Fill();
+            Card(root, "Background", Theme.Dark.WithAlpha(0.93f), 30f).rectTransform.Fill();
             Panel(root, "HeaderBar", Theme.Gold, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 260, 12);
 
             var title = MakeText(root, "Title", "WAITING FOR PLAYERS", 32, Theme.Gold, bold: true);
@@ -939,7 +951,7 @@ namespace Poker.EditorTools
             var backdrop = dim.gameObject.AddComponent<Button>(); // click outside the card to close
             backdrop.transition = Selectable.Transition.None;
 
-            var card = Panel(root, "Card", Theme.Panel, 30f);
+            var card = Card(root, "Card", Theme.Panel, 30f);
             card.rectTransform.At(0, 0, 1560, 960);
             card.raycastTarget = true; // clicks on the card must not reach the backdrop
             Panel(card.transform, "HeaderBar", Theme.Gold, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 320, 12);
@@ -1027,7 +1039,7 @@ namespace Poker.EditorTools
             var card = Node("Card", root).At(0, 0, 800, 520);
             var glow = Img(card, "Glow", UISprites.Glow, Theme.Gold.WithAlpha(0.25f));
             glow.rectTransform.At(0, 0, 1300, 900);
-            var bg = Panel(card, "Background", Theme.Panel, 30f);
+            var bg = Card(card, "Background", Theme.Panel, 30f);
             bg.rectTransform.Fill();
             var header = Panel(card, "HeaderBar", Theme.Gold, 7f);
             header.rectTransform.Pin(new Vector2(0.5f, 1f), 0, -18, 320, 14);

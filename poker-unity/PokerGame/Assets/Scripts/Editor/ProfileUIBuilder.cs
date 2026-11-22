@@ -179,7 +179,7 @@ namespace Poker.EditorTools
             backdrop = dim.gameObject.AddComponent<Button>();
             backdrop.transition = Selectable.Transition.None;
 
-            var panel = Panel(root, "Card", Theme.Panel, 30f);
+            var panel = Card(root, "Card", Theme.Panel, 30f);
             panel.raycastTarget = true; // clicks on the card must not reach the backdrop
             panel.rectTransform.At(0, 0, w, h);
             card = panel.rectTransform;

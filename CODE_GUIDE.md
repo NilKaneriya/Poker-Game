@@ -205,6 +205,9 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `SettingToggleButton` | On/off button for music, sound or break reminders. |
 | `ButtonClickSound` | Click sound on a button (the scene builder adds it to every button). |
 | `SceneMusic` | Starts the scene's music track. |
+| `ButtonFeedback` | Every button grows a little on hover, squeezes when pressed and springs back (skipped while disabled). |
+| `SwitchToggleView` | Draws a Toggle as a sliding pill switch (knob slides, track turns gold); follows the value however it is set. |
+| `InputFocusHighlight` | Gold ring around a text field while typing. |
 
 ### UI/Splash and UI/Lobby
 | Class | Responsibility |
@@ -265,8 +268,8 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | Class | Responsibility |
 |---|---|
 | `PokerSceneBuilder` | **Tools > Poker > Build Scenes** creates Splash, Lobby and Game scenes, prefabs and config, and wires every reference. The whole UI is reproducible from code. |
-| `UIFactory` | Helpers to create styled UI objects from code. |
-| `UISprites` | Generates the rounded, circle, ring, glow and table images. |
+| `UIFactory` | Helpers to create styled UI objects from code. The visual system lives here: `MakeButton` (shine + depth + hover/press feedback), `Card` (raised panel: shadow, top light, thin border; `Panel` stays flat for small details), `MakeToggle` (pill switch), `MakeInput` (focus ring). Changing a style here restyles every scene. |
+| `UISprites` | Generates every UI image as a PNG: rounded box, outline, gloss, circle, ring, glow, background gradient, vignette, and the table (drop shadow, padded rim with highlight, gold inlay, textured felt with a shadow under the rim). |
 | `Theme` | Colours for building scenes. Shared colours come from `Constants.UIColors`. |
 | `Audio/PlaceholderSoundGenerator` | **Tools > Poker > Generate Placeholder Sounds** (also run by Build Scenes) synthesizes every sound as WAV files and fills empty `SoundLibrary` entries. Never overwrites clips you assigned. |
 | `Audio/SynthBuffer` | Tiny synthesizer: decaying tones with harmonics, slides, vibrato and tremolo, filtered noise; looping buffers for seamless music. |

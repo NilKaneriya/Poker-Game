@@ -1,14 +1,20 @@
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Poker.UI
 {
     /// <summary>
-    /// Shared open/close behaviour for pop-up panels (settings, profile): fade + pop,
-    /// close with the close button, the dimmed backdrop or Escape.
+    /// Shared open/close behaviour for pop-up panels (settings, profile): the backdrop fades
+    /// in while the card springs up from slightly smaller; closing fades it away. Closes with
+    /// the close button, a click on the dimmed backdrop, or Escape.
     /// </summary>
     public abstract class ModalPanel : MonoBehaviour
     {
+        private const float OpenSeconds = 0.28f;
+        private const float CloseSeconds = 0.16f;
+        private const float StartScale = 0.88f;
+
         [SerializeField] private CanvasGroup group;
         [SerializeField] private RectTransform card;
         [SerializeField] private Button openButton;     // optional: the button that opens this panel
@@ -22,7 +28,9 @@ namespace Poker.UI
             if (openButton != null) openButton.onClick.AddListener(Open);
             closeButton.onClick.AddListener(Close);
             if (backdropButton != null) backdropButton.onClick.AddListener(Close);
-            SetVisible(false);
+            IsOpen = false;
+            group.alpha = 0f;
+            group.interactable = group.blocksRaycasts = false;
         }
 
         protected virtual void Update()
@@ -30,29 +38,36 @@ namespace Poker.UI
             if (IsOpen && Input.GetKeyDown(KeyCode.Escape)) Close();
         }
 
+        private void OnDestroy() => DOTween.Kill(this);
+
         public void Open()
         {
             if (IsOpen) return;
-            SetVisible(true);
-            UIAnim.PopIn(card, 0.25f);
+            IsOpen = true;
+            group.interactable = group.blocksRaycasts = true;
+            DOTween.Kill(this);
+            card.localScale = Vector3.one * StartScale;
+            DOTween.Sequence()
+                .Append(group.DOFade(1f, OpenSeconds * 0.7f))
+                .Join(card.DOScale(1f, OpenSeconds).SetEase(Ease.OutBack))
+                .SetUpdate(true).SetId(this);
             OnOpened();
         }
 
         public void Close()
         {
             if (!IsOpen) return;
-            SetVisible(false);
+            IsOpen = false;
+            group.interactable = group.blocksRaycasts = false; // clicks go through at once
+            DOTween.Kill(this);
+            DOTween.Sequence()
+                .Append(group.DOFade(0f, CloseSeconds))
+                .Join(card.DOScale(0.95f, CloseSeconds).SetEase(Ease.InQuad))
+                .SetUpdate(true).SetId(this);
             OnClosed();
         }
 
         protected virtual void OnOpened() { }
         protected virtual void OnClosed() { }
-
-        private void SetVisible(bool visible)
-        {
-            IsOpen = visible;
-            group.alpha = visible ? 1f : 0f;
-            group.interactable = group.blocksRaycasts = visible;
-        }
     }
 }

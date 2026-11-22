@@ -29,7 +29,7 @@ namespace Poker.EditorTools.Chat
             unreadText.rectTransform.Fill();
 
             // Window
-            var window = Panel(root, "ChatWindow", Theme.Panel.WithAlpha(0.97f), 24f);
+            var window = Card(root, "ChatWindow", Theme.Panel.WithAlpha(0.97f), 24f);
             window.raycastTarget = true; // clicks on the window must not reach the table
             window.rectTransform.Pin(BottomLeft, margin, margin + 72, 560, 500);
             var group = Group(window);

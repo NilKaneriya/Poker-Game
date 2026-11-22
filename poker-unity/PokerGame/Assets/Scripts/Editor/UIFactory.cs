@@ -74,6 +74,30 @@ namespace Poker.EditorTools
         public static Image Panel(Transform parent, string name, Color color, float radius = 22f) =>
             Img(parent, name, UISprites.Rounded, color, radius);
 
+        /// <summary>
+        /// A raised panel: drop shadow (solid cards only), a faint light from the top and a thin
+        /// border. Use for main containers and pop-ups; Panel stays flat for small details.
+        /// </summary>
+        public static Image Card(Transform parent, string name, Color color, float radius = 24f)
+        {
+            var card = Panel(parent, name, color, radius);
+            if (color.a >= 0.9f) AddDepth(card.gameObject, 10f, 3f);
+            Img(card.transform, "Gloss", UISprites.Gloss, Theme.CardGloss, radius).rectTransform.Fill();
+            Img(card.transform, "Border", UISprites.Border, Theme.CardBorder, radius).rectTransform.Fill();
+            return card;
+        }
+
+        /// <summary>Two stacked shadows (a tight dark one and a wide soft one) under a graphic.</summary>
+        public static void AddDepth(GameObject target, float softDistance, float hardDistance)
+        {
+            var soft = target.AddComponent<Shadow>();
+            soft.effectColor = Theme.SoftShadow;
+            soft.effectDistance = new Vector2(0f, -softDistance);
+            var hard = target.AddComponent<Shadow>();
+            hard.effectColor = Theme.Shadow;
+            hard.effectDistance = new Vector2(0f, -hardDistance);
+        }
+
         public static TextMeshProUGUI MakeText(Transform parent, string name, string text, float size, Color color,
             TextAlignmentOptions align = TextAlignmentOptions.Center, bool bold = false)
         {
@@ -98,14 +122,20 @@ namespace Poker.EditorTools
             var img = Img(parent, name, UISprites.Rounded, background, radius, raycast: true);
             var button = img.gameObject.AddComponent<Button>();
             img.gameObject.AddComponent<ButtonClickSound>(); // every button clicks
+            img.gameObject.AddComponent<ButtonFeedback>();   // grows on hover, squeezes when pressed
             button.targetGraphic = img;
             var colors = button.colors;
             colors.normalColor = Color.white;
-            colors.highlightedColor = new Color(0.92f, 0.92f, 0.92f);
-            colors.pressedColor = new Color(0.75f, 0.75f, 0.75f);
+            colors.highlightedColor = new Color(0.94f, 0.94f, 0.94f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
             colors.selectedColor = Color.white;
             colors.disabledColor = new Color(0.45f, 0.45f, 0.5f, 0.6f);
+            colors.fadeDuration = 0.08f;
             button.colors = colors;
+
+            // Depth and light: a darker edge below (solid buttons) and a shine on the top half.
+            if (background.a >= 0.9f) AddDepth(img.gameObject, 6f, 3f);
+            Img(img.transform, "Gloss", UISprites.Gloss, Theme.ButtonGloss, radius).rectTransform.Fill();
 
             var text = MakeText(img.transform, "Label", label, fontSize, textColor, TextAlignmentOptions.Center, bold: true);
             text.rectTransform.Fill(8, 8, 4, 4);
@@ -143,24 +173,45 @@ namespace Poker.EditorTools
             input.caretColor = Theme.Gold;
             input.caretWidth = 3;
             input.selectionColor = Theme.Gold.WithAlpha(0.35f);
+
+            // Gold ring while typing.
+            var ring = Img(bg.transform, "FocusRing", UISprites.Border, Theme.Gold, 16f);
+            ring.rectTransform.Fill(-2, -2, -2, -2);
+            var ringGroup = ring.gameObject.AddComponent<CanvasGroup>();
+            ringGroup.alpha = 0f;
+            ringGroup.blocksRaycasts = false;
+            var focus = bg.gameObject.AddComponent<InputFocusHighlight>();
+            Wire(focus, "ring", ringGroup);
+            Img(bg.transform, "Border", UISprites.Border, Theme.CardBorder, 16f).rectTransform.Fill();
             return input;
         }
 
+        /// <summary>On/off switch (sliding knob) with a label to its right; clicking the label switches too.</summary>
         public static Toggle MakeToggle(Transform parent, string name, string label, bool isOn)
         {
             var root = Node(name, parent);
-            var box = Img(root, "Box", UISprites.Rounded, Theme.Input, 10f, raycast: true);
-            box.rectTransform.Pin(new Vector2(0f, 0.5f), 0, 0, 40, 40);
-            var check = Img(box.transform, "Check", UISprites.Rounded, Theme.Gold, 6f);
-            check.rectTransform.At(0, 0, 24, 24);
+            var track = Img(root, "Track", UISprites.Rounded, Theme.SwitchOff, 19f, raycast: true);
+            track.rectTransform.Pin(new Vector2(0f, 0.5f), 0, 0, 72, 38);
+            Img(track.transform, "Border", UISprites.Border, Theme.CardBorder, 19f).rectTransform.Fill();
+            var knob = Img(track.transform, "Knob", UISprites.Circle, Color.white);
+            knob.rectTransform.At(isOn ? 17 : -17, 0, 30, 30);
+            AddDepth(knob.gameObject, 3f, 1f);
             var text = MakeText(root, "Label", label, 24, Theme.Text, TextAlignmentOptions.Left);
-            text.rectTransform.Fill(56, 0, 0, 0);
+            text.rectTransform.Fill(88, 0, 0, 0);
             text.raycastTarget = true; // clicking the label toggles too
 
             var toggle = root.gameObject.AddComponent<Toggle>();
-            toggle.targetGraphic = box;
-            toggle.graphic = check;
+            toggle.targetGraphic = track;
+            toggle.transition = Selectable.Transition.None; // the switch animates itself
             toggle.isOn = isOn;
+            root.gameObject.AddComponent<ButtonClickSound>();
+
+            var view = root.gameObject.AddComponent<SwitchToggleView>();
+            Wire(view, "track", track);
+            Wire(view, "knob", knob.rectTransform);
+            WireColor(view, "onColor", Theme.Gold);
+            WireColor(view, "offColor", Theme.SwitchOff);
+            WireFloat(view, "knobTravel", 17f);
             return toggle;
         }
 
@@ -182,6 +233,8 @@ namespace Poker.EditorTools
             var handleArea = Node("Handle Slide Area", root).Fill(14, 14, 0, 0);
             var handle = Img(handleArea, "Handle", UISprites.Circle, Theme.Text, raycast: true);
             handle.rectTransform.sizeDelta = new Vector2(34f, 0f);
+            AddDepth(handle.gameObject, 4f, 1.5f);
+            Img(handle.transform, "Dot", UISprites.Circle, Theme.Gold).rectTransform.Fill(10, 10, 10, 10);
 
             var slider = root.gameObject.AddComponent<Slider>();
             slider.fillRect = fill.rectTransform;
@@ -245,6 +298,24 @@ namespace Poker.EditorTools
             var prop = so.FindProperty(field)
                 ?? throw new ArgumentException($"{target.GetType().Name} has no serialized field '{field}'");
             prop.enumValueIndex = Array.IndexOf(Enum.GetValues(value.GetType()), value);
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        public static void WireColor(Object target, string field, Color value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field)
+                ?? throw new ArgumentException($"{target.GetType().Name} has no serialized field '{field}'");
+            prop.colorValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        public static void WireFloat(Object target, string field, float value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field)
+                ?? throw new ArgumentException($"{target.GetType().Name} has no serialized field '{field}'");
+            prop.floatValue = value;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

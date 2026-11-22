@@ -20,6 +20,14 @@ namespace Poker.EditorTools
         public static readonly Color CardBack = Hex("2F4CB3");
         public static readonly Color Dark = UIColors.Dark;
 
+        // Depth and light (cards, buttons, popups)
+        public static readonly Color Shadow = new Color(0f, 0f, 0f, 0.45f);
+        public static readonly Color SoftShadow = new Color(0f, 0f, 0f, 0.2f);
+        public static readonly Color CardBorder = new Color(1f, 1f, 1f, 0.07f);
+        public static readonly Color CardGloss = new Color(1f, 1f, 1f, 0.045f);
+        public static readonly Color ButtonGloss = new Color(1f, 1f, 1f, 0.2f);
+        public static readonly Color SwitchOff = Hex("3A4A66");
+
         public static Color Hex(string hex)
         {
             ColorUtility.TryParseHtmlString("#" + hex, out Color c);
