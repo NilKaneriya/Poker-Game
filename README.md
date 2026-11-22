@@ -1,5 +1,7 @@
 # Multiplayer Texas Hold'em
 
+[![Server CI](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml)
+
 A multiplayer Texas Hold'em prototype for 2 to 6 players, played with **virtual chips
 only**. There are no real money deposits, withdrawals or wagers, no purchases and no
 loot boxes. Players join a table from different devices, and **all game logic runs on
@@ -84,10 +86,14 @@ npm run test:mongo     # the storage/account/profile/stats tests again on a real
                        # (mongodb-memory-server downloads one the first time; nothing to install)
 npm run test:e2e       # starts a throwaway server and plays through the network: login, join by code,
                        # reconnect, waiting room, host start, bots tables (join mid-hand, take a bot's seat),
-                       # stats, chat, profile + settings, seat freed after disconnect
+                       # stats, hand history, chat, profile + settings, seat freed after disconnect
 npm run test:e2e:mongo # the same end-to-end run with the server on MongoDB
 npm run play:bots   # watch real hands against bots in the console (against a running server)
 ```
+
+Every push and pull request runs all of these on GitHub Actions (`.github/workflows/server.yml`):
+lint, unit tests, MongoDB storage tests and both end-to-end runs. `npm run lint` checks the
+server with ESLint and Prettier.
 
 ---
 
