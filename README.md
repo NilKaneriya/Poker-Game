@@ -18,6 +18,14 @@ the server**.
 landscape window, in the browser via WebGL or as a Windows build). It also runs on
 Android phones and tablets in landscape, but the layout is tuned for desktop.
 
+**Play it now (WebGL):** https://webgl-sooty.vercel.app (the game; it talks to the Socket.IO
+server at https://poker-game-zw79.onrender.com). The server runs on a free host, so the
+first request after a quiet period can take up to a minute while it wakes up. To test
+multiplayer, open the link in two or three browser windows (use a different account in
+each, and leave *Remember me* unticked), create a table in one and join it by code from
+the others; see section 2. A requirement-by-requirement check against the task sheet is in
+[qa/reports/task-compliance.md](qa/reports/task-compliance.md).
+
 See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
 ---
@@ -81,7 +89,8 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test               # 110 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
+npm test               # 126 tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, a full
+                       # 6-player table over real sockets (hidden cards, button, showdown, chip totals),
                        # waiting list, hand history, chat, reactions, storage, accounts, profile and settings rules
 npm run test:mongo     # the storage/account/profile/stats tests again on a real MongoDB
                        # (mongodb-memory-server downloads one the first time; nothing to install)
