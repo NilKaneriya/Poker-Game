@@ -28,9 +28,9 @@ the others; see section 2. A requirement-by-requirement check against the task s
 
 **Video:** a full 3-player hand, from the lobby to the showdown.
 
-<video src="media/poker_3player_hand_demo.mp4" controls muted width="800"></video>
+[![3-player hand demo](media/poker_3player_hand_demo.gif)](media/poker_3player_hand_demo.mp4)
 
-If the player does not show, open [media/poker_3player_hand_demo.mp4](media/poker_3player_hand_demo.mp4).
+The preview above plays in the page (full 2:22 hand, low quality). Click it for the full-quality video: [media/poker_3player_hand_demo.mp4](media/poker_3player_hand_demo.mp4).
 
 See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
