@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const EVENTS = require('./events');
 const { store, nameOf } = require('../services/AccountStore');
 const { defaultAvatarFor } = require('../services/profileRules');
@@ -8,6 +9,10 @@ const { runnerFor } = require('../game/TableRunner');
 const { startGrace, cancelGrace } = require('../game/reconnectGrace');
 const registerLobbyHandlers = require('./handlers/lobbyHandlers');
 const registerGameHandlers = require('./handlers/gameHandlers');
+
+// A new id every time the server process starts. A client that loses its table compares it
+// with the id it saw before: same id = its seat was released (away too long), new id = restart.
+const SERVER_ID = crypto.randomUUID();
 
 module.exports = (io) => {
   // Every socket must present a valid login token (from /auth/login) in the handshake.
@@ -41,8 +46,9 @@ module.exports = (io) => {
     // Reconnect: put the player back at their table, seat and chips as they were.
     cancelGrace(playerId);
     const table = tables.findByPlayer(playerId);
-    // tableCode tells the client whether its table still exists (it doesn't after a server restart).
-    socket.emit(EVENTS.SESSION, { playerId, username: name, tableCode: table?.code ?? null });
+    // tableCode tells the client whether its table still exists; serverId tells it why not
+    // (a different id than before means the server restarted).
+    socket.emit(EVENTS.SESSION, { playerId, username: name, tableCode: table?.code ?? null, serverId: SERVER_ID });
     sendStats(io, playerId);
     if (table) {
       table.setConnected(playerId, true);

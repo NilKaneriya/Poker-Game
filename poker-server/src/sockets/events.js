@@ -12,8 +12,9 @@ module.exports = Object.freeze({
   REBUY: 'rebuy', //               out of chips: restart with the starting stack
 
   // Server -> Client
-  SESSION: 'session', //           { playerId, username, tableCode }  sent after the login token is accepted;
-  //                               tableCode = the table you are seated at, null if none (e.g. after a server restart)
+  SESSION: 'session', //           { playerId, username, tableCode, serverId }  sent after the login token is accepted;
+  //                               tableCode = the table you are seated at, null if none (seat released or server restarted);
+  //                               serverId = new on every server start, so the client can tell those two apart
   STATS: 'stats', //               { handsPlayed, handsWon, biggestPot, bestHand, bestHandRank }
   HAND_HISTORY: 'handHistory', //  { hands: [...] }  newest first, as you saw them (services/handRecord.js)
   TABLE_LIST: 'tableList',

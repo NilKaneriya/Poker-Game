@@ -118,10 +118,13 @@ async function waitingRoomChecks(alice, bob) {
   check(!swapped.hand || swapped.hand.stage === 'preflop', 'joiner was seated in the middle of a hand');
   console.log(`Bots table ${bots.code}: Bob took a bot's seat after the hand (2 humans + 2 bots)`);
 
-  // Bad sizes fall back to the 6-seat default.
+  // Seat counts outside 2-6 are clamped into range.
   bob.emit('createTable', { mode: 'friends', maxSeats: 9 });
   const fallback = await stateWhere(bob, (s) => s.code !== duel.code && s.hostId === s.you.playerId);
   check(fallback.maxSeats === 6, 'invalid seat count was not clamped');
+  bob.emit('createTable', { mode: 'friends', maxSeats: 1 });
+  const tooSmall = await stateWhere(bob, (s) => s.code !== fallback.code && s.hostId === s.you.playerId);
+  check(tooSmall.maxSeats === 2, 'a 1-seat request should make a 2-seat table');
   alice.emit('leaveTable');
   bob.emit('leaveTable');
 }
@@ -314,6 +317,7 @@ async function graceChecks(alice, bob, bobToken) {
   const bob3 = io(URL, { auth: { token: bobToken } });
   const session = await once(bob3, 'session');
   check(session.tableCode === null, 'session should report no table after the seat was freed');
+  check(typeof session.serverId === 'string' && session.serverId.length > 0, 'session should carry the server id');
   console.log('Bob reconnected later: session reports no table');
   bob3.close();
   alice.emit('leaveTable');

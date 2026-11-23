@@ -21,9 +21,10 @@ function cleanTableName(value) {
 
 const cleanMode = (value) => (VALID_MODES.has(value) ? value : TABLE_MODES.FRIENDS);
 
+/** Whole numbers are clamped into the allowed range (1 -> 2, 7 -> 6); anything else gets a full table. */
 function cleanSeatCount(value) {
   const { minSeats, maxSeats } = config.table;
-  return Number.isInteger(value) && value >= minSeats && value <= maxSeats ? value : maxSeats;
+  return Number.isInteger(value) ? Math.min(maxSeats, Math.max(minSeats, value)) : maxSeats;
 }
 
 module.exports = (io, socket) => {
