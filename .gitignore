@@ -4,6 +4,9 @@ node_modules/
 poker-server/data/
 *.log
 
+# ---------- Local WebGL build output (made by Poker > Build WebGL) ----------
+/Build/
+
 # ---------- Unity (poker-unity/PokerGame) ----------
 poker-unity/PokerGame/[Ll]ibrary/
 poker-unity/PokerGame/[Tt]emp/
