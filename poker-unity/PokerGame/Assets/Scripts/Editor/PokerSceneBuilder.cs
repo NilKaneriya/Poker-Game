@@ -683,6 +683,7 @@ namespace Poker.EditorTools
             var toast = BuildToast(canvas, new Vector2(0.5f, 1f), -12);
             BuildBreakReminder(canvas);
             var result = BuildResultPanel(canvas);
+            leave.transform.SetSiblingIndex(result.transform.GetSiblingIndex() + 1); // Leave stays clickable above the result pop-up
 
             // Hint: hand rankings chart + rules (bottom-left corner is free at every table size).
             var rankingsButton = MakeButton(canvas, "HandRankingsButton", "♠  Hand rankings", Theme.Dark.WithAlpha(0.85f), Theme.Gold, 24);
@@ -697,7 +698,16 @@ namespace Poker.EditorTools
 
             AddSceneMusic(SoundId.MusicTable);
             var controller = AddController<GameController>("GameController");
-            Wire(controller, "timerAlert", controller.gameObject.AddComponent<TurnTimerAlert>());
+            var timerAlert = controller.gameObject.AddComponent<TurnTimerAlert>();
+            // Countdown for your turn, drawn above every pop-up so it is never hidden (the server timer keeps running).
+            var countdownPill = Panel(canvas, "TurnCountdown", Theme.Dark.WithAlpha(0.92f), 24f);
+            countdownPill.rectTransform.Pin(new Vector2(0.5f, 1f), 0, -96, 300, 52);
+            var countdownText = MakeText(countdownPill.transform, "Text", "Your turn 30s", 26, Theme.Gold, bold: true);
+            countdownText.rectTransform.Fill();
+            countdownPill.gameObject.SetActive(false);
+            Wire(timerAlert, "countdownRoot", countdownPill.gameObject);
+            Wire(timerAlert, "countdownText", countdownText);
+            Wire(controller, "timerAlert", timerAlert);
             Wire(controller, "tableNameText", tableName);
             Wire(controller, "codeText", codeText);
             Wire(controller, "copyCodeButton", copy);

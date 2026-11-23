@@ -133,7 +133,7 @@ namespace Poker.EditorTools.Reactions
 
             var card = Card(root, "Card", Theme.Panel, 30f);
             card.raycastTarget = true; // clicks on the card must not reach the backdrop
-            card.rectTransform.At(0, -40, 760, 560);
+            card.rectTransform.At(0, -40, 760, 480);
             Panel(card.transform, "HeaderBar", Theme.Gold, 7f).rectTransform.Pin(new Vector2(0.5f, 1f), 0, -16, 220, 12);
             var title = MakeText(card.transform, "Title", Texts.Title, 34, Theme.Gold, TextAlignmentOptions.Left, bold: true);
             title.rectTransform.Pin(new Vector2(0f, 1f), 36, -34, 560, 48);
@@ -151,7 +151,7 @@ namespace Poker.EditorTools.Reactions
             var chip = MakeButton(targets, "TargetTemplate", Texts.Everyone, Color.white.WithAlpha(0.08f), Color.white, 20, 21f);
 
             // Emotes: two rows of six
-            var grid = Node("Emotes", card.transform).Pin(new Vector2(0.5f, 0f), 0, 34, 690, 228);
+            var grid = Node("Emotes", card.transform).Pin(new Vector2(0.5f, 1f), 0, -224, 690, 228); // right under the player chips, no gap
             var emoteGrid = grid.gameObject.AddComponent<GridLayoutGroup>();
             emoteGrid.cellSize = new Vector2(104, 104);
             emoteGrid.spacing = new Vector2(10, 18);
