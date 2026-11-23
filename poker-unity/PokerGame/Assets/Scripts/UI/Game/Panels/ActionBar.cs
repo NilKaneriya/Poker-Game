@@ -52,6 +52,7 @@ namespace Poker.UI.Game
             halfPotButton.onClick.AddListener(() => SetRaise(PotSizedRaise(0.5f)));
             potButton.onClick.AddListener(() => SetRaise(PotSizedRaise(1f)));
             raiseSlider.onValueChanged.AddListener(v => SetRaise((int)v));
+            raiseInput.onValueChanged.AddListener(OnRaiseTyping); // button and slider follow every keystroke
             raiseInput.onEndEdit.AddListener(OnRaiseTyped);
         }
 
@@ -132,6 +133,16 @@ namespace Poker.UI.Game
         {
             int callTotal = myStreetBet + legal.toCall;
             return callTotal + Mathf.RoundToInt(fraction * (pot + legal.toCall));
+        }
+
+        /// <summary>While typing: keep slider and button in step, but leave the text box alone.</summary>
+        private void OnRaiseTyping(string text)
+        {
+            if (legal == null || !int.TryParse(text, out int amount)) return;
+            amount = Mathf.Clamp(amount, legal.minRaiseTo, legal.maxRaiseTo);
+            raiseSlider.SetValueWithoutNotify(amount);
+            bool isOpeningBet = myStreetBet + legal.toCall == 0;
+            raiseLabel.text = (isOpeningBet ? "Bet " : "Raise to ") + CardFormat.Chips(amount);
         }
 
         private void OnRaiseTyped(string text)

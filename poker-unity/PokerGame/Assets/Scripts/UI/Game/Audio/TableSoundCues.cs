@@ -82,7 +82,7 @@ namespace Poker.UI.Game
             SoundId sound = seat.folded ? SoundId.Fold
                 : seat.allIn ? SoundId.ChipAllIn
                 : seat.lastAction == PokerActions.Check ? SoundId.Check
-                : seat.lastAction == PokerActions.Raise ? SoundId.ChipRaise
+                : seat.lastAction == PokerActions.Raise || seat.lastAction == "bet" ? SoundId.ChipRaise
                 : SoundId.ChipBet;
             Audio.Play(sound);
         }
