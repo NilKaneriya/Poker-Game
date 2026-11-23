@@ -62,8 +62,8 @@ class Table {
   }
 
   /** Join the waiting list (bots tables, mid-hand). */
-  addWaiting({ playerId, name, avatarId = 0 }) {
-    if (!this.hasMember(playerId)) this.waiting.push({ playerId, name, avatarId, connected: true });
+  addWaiting({ playerId, name, avatarId = 0, chips = this.startingChips }) {
+    if (!this.hasMember(playerId)) this.waiting.push({ playerId, name, avatarId, chips, connected: true });
   }
 
   /** A seated or waiting player changed their profile: show the new name and avatar. */
@@ -100,9 +100,10 @@ class Table {
    * @returns {number|null} the chips they walked away with (null if they had no seat)
    */
   removePlayer(playerId) {
+    const waiting = this.waiting.find((w) => w.playerId === playerId);
     this.waiting = this.waiting.filter((w) => w.playerId !== playerId);
     const seat = this.findSeat(playerId);
-    if (seat === -1) return null;
+    if (seat === -1) return waiting ? waiting.chips : null; // a waiting player gets their buy-in back
     if (this.hand && !this.hand.isComplete) {
       this.hand.foldOutOfTurn(playerId);
       this.syncChips();
@@ -180,13 +181,21 @@ class Table {
   }
 
   /** Out of chips: start again with the starting stack (only between hands). */
-  rebuy(playerId) {
+  rebuy(playerId, chips = this.startingChips) {
+    const check = this.canRebuy(playerId);
+    if (!check.ok) return check;
+    const seat = this.getSeat(playerId);
+    seat.chips = chips;
+    seat.sittingOut = false;
+    return { ok: true };
+  }
+
+  /** Is this player allowed to buy back in right now? (Checked again after the wallet is charged.) */
+  canRebuy(playerId) {
     const seat = this.getSeat(playerId);
     if (!seat) return { ok: false, error: 'You are not at this table' };
     if (seat.chips > 0) return { ok: false, error: 'You still have chips' };
     if (this.isDealtIn(playerId) && !this.hand.isComplete) return { ok: false, error: 'Wait for the hand to finish' };
-    seat.chips = this.startingChips;
-    seat.sittingOut = false;
     return { ok: true };
   }
 

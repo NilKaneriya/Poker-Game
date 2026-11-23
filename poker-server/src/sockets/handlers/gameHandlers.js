@@ -2,6 +2,9 @@ const EVENTS = require('../events');
 const { ACTIONS } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const { runnerFor } = require('../../game/TableRunner');
+const wallet = require('../../services/WalletService');
+const { sendWallet } = require('../broadcast');
+const { tryLock } = require('../playerLocks');
 
 const VALID_ACTIONS = new Set(Object.values(ACTIONS));
 
@@ -22,11 +25,31 @@ module.exports = (io, socket) => {
     if (!result.ok) reject(result.error);
   });
 
-  socket.on(EVENTS.REBUY, () => {
+  // Out of chips at the table: buy back in from the wallet (the chips are not free).
+  socket.on(EVENTS.REBUY, async () => {
     const table = tables.findByPlayer(playerId);
     if (!table) return reject('You are not at a table');
-    const result = table.rebuy(playerId);
-    if (!result.ok) return reject(result.error);
-    runnerFor(io, table).update(); // may start a hand now that we have chips again
+    if (!table.canRebuy(playerId).ok) return reject(table.canRebuy(playerId).error);
+
+    const release = tryLock(playerId);
+    if (!release) return reject('One moment');
+    try {
+      const paid = await wallet.buyIn(playerId, table.startingChips, `rebuy ${table.code}`);
+      if (!paid.ok) return reject(paid.error);
+
+      // Things may have changed while the wallet was busy: check again, refund if no longer possible.
+      const again =
+        tables.findByPlayer(playerId) === table ? table.canRebuy(playerId) : { ok: false, error: 'You are not at a table' };
+      if (!again.ok || !socket.connected) {
+        await wallet.cashOut(playerId, paid.amount, 'refund', paid.amount);
+        sendWallet(io, playerId);
+        return reject(again.error || 'Could not buy in');
+      }
+      table.rebuy(playerId, paid.amount);
+      sendWallet(io, playerId);
+      runnerFor(io, table).update(); // may start a hand now that we have chips again
+    } finally {
+      release();
+    }
   });
 };

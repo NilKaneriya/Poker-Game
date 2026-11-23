@@ -1,6 +1,7 @@
 const EVENTS = require('./events');
 const tables = require('../services/TableManager');
 const stats = require('../services/StatsService');
+const wallet = require('../services/WalletService');
 const { buildPlayerView } = require('../game/playerView');
 const log = require('../utils/logger');
 
@@ -28,4 +29,14 @@ async function sendStats(io, playerId) {
   }
 }
 
-module.exports = { playerRoom, tableRoom, sendTableState, sendTableList, sendStats };
+/** A player's wallet balance (chips outside any table), sent only to that player. */
+async function sendWallet(io, playerId) {
+  try {
+    const { balance } = await wallet.get(playerId);
+    io.to(playerRoom(playerId)).emit(EVENTS.WALLET, { balance });
+  } catch (err) {
+    log.error(`Could not load wallet for ${playerId}: ${err.message}`);
+  }
+}
+
+module.exports = { playerRoom, tableRoom, sendTableState, sendTableList, sendStats, sendWallet };

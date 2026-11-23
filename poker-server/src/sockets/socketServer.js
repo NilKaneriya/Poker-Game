@@ -3,11 +3,13 @@ const { store, nameOf } = require('../services/AccountStore');
 const { defaultAvatarFor } = require('../services/profileRules');
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
-const { playerRoom, tableRoom, sendStats } = require('./broadcast');
+const { playerRoom, tableRoom, sendStats, sendWallet } = require('./broadcast');
 const { runnerFor } = require('../game/TableRunner');
 const { startGrace, cancelGrace } = require('../game/reconnectGrace');
 const registerLobbyHandlers = require('./handlers/lobbyHandlers');
 const registerGameHandlers = require('./handlers/gameHandlers');
+const registerShopHandlers = require('./handlers/shopHandlers');
+const wallet = require('../services/WalletService');
 
 module.exports = (io) => {
   // Every socket must present a valid login token (from /auth/login) in the handshake.
@@ -41,9 +43,16 @@ module.exports = (io) => {
     // Reconnect: put the player back at their table, seat and chips as they were.
     cancelGrace(playerId);
     const table = tables.findByPlayer(playerId);
+    // Chips handed to a table that no longer exists (server restart) go back to the wallet.
+    try {
+      await wallet.reconcile(playerId, Boolean(table));
+    } catch (err) {
+      log.error(`Wallet check failed for ${playerId}: ${err.message}`);
+    }
     // tableCode tells the client whether its table still exists (it doesn't after a server restart).
     socket.emit(EVENTS.SESSION, { playerId, username: name, tableCode: table?.code ?? null });
     sendStats(io, playerId);
+    sendWallet(io, playerId);
     if (table) {
       table.setConnected(playerId, true);
       socket.join(tableRoom(table.code));
@@ -53,6 +62,7 @@ module.exports = (io) => {
 
     registerLobbyHandlers(io, socket);
     registerGameHandlers(io, socket);
+    registerShopHandlers(io, socket);
 
     socket.on('disconnect', async (reason) => {
       log.info(`Disconnected ${name} (${reason})`);

@@ -1,6 +1,5 @@
 const config = require('../config');
 const log = require('../utils/logger');
-const wallet = require('../services/ChipWallet');
 const TurnTimer = require('./TurnTimer');
 const { sendTableState, sendTableList, sendStats } = require('../sockets/broadcast');
 const gameEvents = require('./gameEvents');
@@ -221,8 +220,8 @@ class TableRunner {
     const table = this.table;
     while (table.waiting.length > 0) {
       if (table.isFull && !this.removeBot()) break; // only humans left; they keep waiting
-      const { playerId, name, avatarId, connected } = table.waiting.shift();
-      const seat = table.addPlayer({ playerId, name, avatarId, chips: wallet.stackFor(playerId, table.startingChips) });
+      const { playerId, name, avatarId, connected, chips } = table.waiting.shift();
+      const seat = table.addPlayer({ playerId, name, avatarId, chips });
       table.getSeat(playerId).connected = connected;
       log.info(`Table ${table.code}: ${name} took seat ${seat} after waiting for the hand to end`);
       gameEvents.emit(GAME_EVENTS.PLAYER_SEATED, { code: table.code, playerId, name });

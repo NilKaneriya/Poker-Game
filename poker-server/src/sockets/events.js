@@ -9,11 +9,16 @@ module.exports = Object.freeze({
   GET_HAND_HISTORY: 'getHandHistory', // your last hands (answered with HAND_HISTORY)
   LIST_TABLES: 'listTables',
   PLAYER_ACTION: 'playerAction', // { action, amount? }  amount = total bet to raise to
+  BUY_ITEM: 'buyItem', //          shop: { itemId }  (dummy purchase, no real money)
+  GET_WALLET: 'getWallet', //      answered with WALLET and SHOP_CATALOG
   REBUY: 'rebuy', //               out of chips: restart with the starting stack
 
   // Server -> Client
   SESSION: 'session', //           { playerId, username, tableCode }  sent after the login token is accepted;
   //                               tableCode = the table you are seated at, null if none (e.g. after a server restart)
+  WALLET: 'wallet', //             { balance }  your chips outside any table; sent after every change
+  SHOP_CATALOG: 'shopCatalog', //  { items: [{ id, name, chips, price }] }
+  SHOP_RESULT: 'shopResult', //    { ok, itemId, message }
   STATS: 'stats', //               { handsPlayed, handsWon, biggestPot, bestHand, bestHandRank }
   HAND_HISTORY: 'handHistory', //  { hands: [...] }  newest first, as you saw them (services/handRecord.js)
   TABLE_LIST: 'tableList',

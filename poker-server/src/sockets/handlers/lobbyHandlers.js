@@ -3,9 +3,10 @@ const config = require('../../config');
 const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
-const wallet = require('../../services/ChipWallet');
+const wallet = require('../../services/WalletService');
+const { tryLock } = require('../playerLocks');
 const handHistory = require('../../services/HandHistoryService');
-const { tableRoom, sendTableList, sendStats } = require('../broadcast');
+const { tableRoom, sendTableList, sendStats, sendWallet } = require('../broadcast');
 const gameEvents = require('../../game/gameEvents');
 const { GAME_EVENTS } = gameEvents;
 const { runnerFor } = require('../../game/TableRunner');
@@ -37,13 +38,43 @@ module.exports = (io, socket) => {
     if (table) socket.leave(tableRoom(table.code));
   }
 
-  function seat(table) {
+  /**
+   * Pay the buy-in from the wallet, then sit (or wait for a seat on a bots table).
+   * The wallet is charged asynchronously, so everything is checked again afterwards and the
+   * buy-in is refunded if the seat is no longer possible. Returns true when seated.
+   */
+  async function takeSeat(table, { waiting = false } = {}) {
     const { name } = me();
-    const seatIndex = table.addPlayer({ ...me(), chips: wallet.stackFor(playerId, table.startingChips) });
-    if (seatIndex === -1) return fail('Table is full');
+    const paid = await wallet.buyIn(playerId, table.startingChips, `table ${table.code}`);
+    if (!paid.ok) {
+      fail(paid.error);
+      return false;
+    }
+    const refund = async (message) => {
+      await wallet.cashOut(playerId, paid.amount, 'refund', paid.amount);
+      sendWallet(io, playerId);
+      if (message) fail(message);
+      return false;
+    };
+
+    if (!socket.connected) return refund(null); // left while we were waiting for the wallet
+    if (tables.get(table.code) !== table) return refund('That table was closed');
+    if (tables.findByPlayer(playerId)) return refund('You are already at a table');
+
+    if (waiting) {
+      table.addWaiting({ ...me(), chips: paid.amount });
+    } else {
+      const seatIndex = table.addPlayer({ ...me(), chips: paid.amount });
+      if (seatIndex === -1) return refund('Table is full');
+      log.info(`${name} sat at ${table.code} seat ${seatIndex} with ${paid.amount} chips`);
+    }
     socket.join(tableRoom(table.code));
-    log.info(`${name} sat at ${table.code} seat ${seatIndex}`);
-    gameEvents.emit(GAME_EVENTS.PLAYER_JOINED, { code: table.code, playerId, name });
+    sendWallet(io, playerId);
+    return true;
+  }
+
+  function announceSeat(table) {
+    gameEvents.emit(GAME_EVENTS.PLAYER_JOINED, { code: table.code, playerId, name: socket.data.name });
     runnerFor(io, table).update(); // adds/removes bots and starts a hand when possible
     sendTableList(io);
   }
@@ -59,56 +90,57 @@ module.exports = (io, socket) => {
     }
   });
 
-  socket.on(EVENTS.CREATE_TABLE, (payload) => {
+  socket.on(EVENTS.CREATE_TABLE, async (payload) => {
     const { tableName, mode, maxSeats } = payload || {};
-    leaveCurrentTable();
-    const table = tables.create({
-      name: cleanTableName(tableName),
-      mode: cleanMode(mode),
-      maxSeats: cleanSeatCount(maxSeats),
-      hostId: playerId,
-    });
-    log.info(`${socket.data.name} created ${table.mode} table ${table.code} (${table.maxSeats} seats)`);
-    seat(table);
+    const release = tryLock(playerId); // one sit-down at a time: two clicks must not charge twice
+    if (!release) return fail('One moment, you are already joining a table');
+    try {
+      leaveCurrentTable();
+      const table = tables.create({
+        name: cleanTableName(tableName),
+        mode: cleanMode(mode),
+        maxSeats: cleanSeatCount(maxSeats),
+        hostId: playerId,
+      });
+      log.info(`${socket.data.name} created ${table.mode} table ${table.code} (${table.maxSeats} seats)`);
+      if (await takeSeat(table)) announceSeat(table);
+      else tables.remove(table.code); // nobody sat: don't leave an empty table behind
+    } finally {
+      release();
+    }
   });
 
-  socket.on(EVENTS.JOIN_TABLE, (payload) => {
+  socket.on(EVENTS.JOIN_TABLE, async (payload) => {
     const { code } = payload || {};
     const table = tables.get(code);
     if (!table) return fail('No table with that code');
 
     // Already seated here (e.g. second tab or reconnect): just resync.
-    if (table.findSeat(playerId) !== -1) {
+    if (table.findSeat(playerId) !== -1 || (table.mode === TABLE_MODES.BOTS && table.isWaiting(playerId))) {
       socket.join(tableRoom(table.code));
       return runnerFor(io, table).update();
     }
-    if (table.mode === TABLE_MODES.BOTS) return joinBotsTable(table);
-    if (table.isFull) return fail('Table is full');
 
-    leaveCurrentTable();
-    seat(table);
+    // Bots game joined by code: mid-hand a friend watches from the waiting list and takes a bot's seat later.
+    const isBots = table.mode === TABLE_MODES.BOTS;
+    if (isBots ? table.humanCount >= table.maxSeats : table.isFull) return fail('Table is full');
+
+    const release = tryLock(playerId);
+    if (!release) return fail('One moment, you are already joining a table');
+    try {
+      leaveCurrentTable();
+      if (!(await takeSeat(table, { waiting: isBots }))) return;
+      if (isBots) {
+        log.info(`${socket.data.name} joined bots table ${table.code}; seated when the current hand ends`);
+        gameEvents.emit(GAME_EVENTS.PLAYER_WAITING, { code: table.code, playerId, name: socket.data.name });
+        runnerFor(io, table).update();
+      } else {
+        announceSeat(table);
+      }
+    } finally {
+      release();
+    }
   });
-
-  /**
-   * A friend joins a game against bots by code. Mid-hand they watch from the waiting
-   * list; when the hand ends a bot stands up and they take its seat. Between hands
-   * the swap happens straight away (the runner does it on update).
-   */
-  function joinBotsTable(table) {
-    if (table.isWaiting(playerId)) {
-      socket.join(tableRoom(table.code));
-      return runnerFor(io, table).update();
-    }
-    if (table.humanCount >= table.maxSeats) return fail('Table is full');
-
-    leaveCurrentTable();
-    const { name } = me();
-    table.addWaiting(me());
-    socket.join(tableRoom(table.code));
-    log.info(`${name} joined bots table ${table.code}; seated when the current hand ends`);
-    gameEvents.emit(GAME_EVENTS.PLAYER_WAITING, { code: table.code, playerId, name });
-    runnerFor(io, table).update();
-  }
 
   socket.on(EVENTS.START_GAME, () => {
     const table = tables.findByPlayer(playerId);

@@ -1,10 +1,28 @@
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
-const wallet = require('../services/ChipWallet');
-const { sendTableList } = require('../sockets/broadcast');
+const wallet = require('../services/WalletService');
+const { sendTableList, sendWallet } = require('../sockets/broadcast');
 const gameEvents = require('./gameEvents');
 const { GAME_EVENTS } = gameEvents;
 const { runnerFor, removeRunner } = require('./TableRunner');
+
+/**
+ * Move the chips a player walked away with back into their wallet. Runs in the background
+ * (the wallet is saved asynchronously) but is queued per player, so a quick re-join always
+ * sees the chips. A failed save is retried; if it still fails the amount is logged so the
+ * chips can be restored by hand instead of vanishing silently.
+ */
+async function payBack(io, playerId, chips, code) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const result = await wallet.cashOut(playerId, chips, `table ${code}`);
+      if (result.ok) return sendWallet(io, playerId);
+    } catch (err) {
+      log.error(`Wallet cash-out failed for ${playerId} (${chips} chips, attempt ${attempt}): ${err.message}`);
+    }
+  }
+  log.error(`LOST CHIPS: could not return ${chips} chips to ${playerId} from table ${code}`);
+}
 
 /**
  * Take a player off their table: folds them if a hand is running, passes on the host
@@ -17,7 +35,7 @@ function removeFromTable(io, playerId, name) {
   if (!table) return null;
 
   const chips = table.removePlayer(playerId);
-  if (chips !== null && !playerId.startsWith('bot-')) wallet.save(playerId, chips);
+  if (chips !== null) payBack(io, playerId, chips, table.code);
   log.info(`${name} left table ${table.code}`);
 
   if (table.humanCount === 0) {
