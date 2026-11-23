@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc985578cc8eb3d47b12b2071ef02b59, type: 3}
   m_Name: ServerConfig
   m_EditorClassIdentifier: 
-  serverUrl: http://localhost:3000
+  serverUrl: https://poker-game-zw79.onrender.com
   logNetworkEvents: 1
