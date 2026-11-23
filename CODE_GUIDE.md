@@ -6,7 +6,7 @@ How the project is built, what every part does, and where it stands today.
 
 ## 1. The project in 30 seconds
 
-A multiplayer Texas Hold'em game played with **virtual chips only** (no real money, no purchases).
+A multiplayer Texas Hold'em game played with **virtual chips only** (no real money; a demo shop adds chips for free).
 
 - **Server**: Node.js + Express + Socket.IO. It holds **all the game rules**. Clients never decide anything.
 - **Client**: Unity 2022.2 (WebGL, Windows, Android). It **only displays** what the server sends and sends the player's *intentions* ("I want to raise to 80") back.
@@ -97,7 +97,11 @@ Every folder may use `config.js` and `utils/`. File names: a file that exports a
 |---|---|
 | `socketServer.js` | Rejects sockets without a valid token; sends `session` (with the table you are at, or none after a restart) and your stats; puts reconnecting players back at their table; starts the grace period on disconnect. |
 | `handlers/lobbyHandlers.js` | `createTable` (validates mode and seat count 2-6), `joinTable` (bots tables: joins the waiting list, seated after the current hand), `leaveTable`, `listTables`, `startGame` (host only). |
-| `handlers/gameHandlers.js` | `playerAction` (validated by the engine), `rebuy`. |
+| `handlers/gameHandlers.js` | `playerAction` (validated by the engine), `rebuy` (paid from the wallet). |
+| `handlers/shopHandlers.js` | `getWallet`, `buyItem` (only a catalog id is accepted). |
+| `playerLocks.js` | One chip move per player at a time (sit down, create, rebuy). |
+| `services/WalletService.js` | Every player's chips outside a table: buy-in, cash-out, refund, shop purchase. The only place balances change. |
+| `services/shopCatalog.js` | The demo shop's items (frozen, server-owned). |
 | `broadcast.js` | Sends every seated human their own view; sends the table list. |
 | `events.js` | Every event name, in one place. |
 | `profileSync.js` | After a profile edit: update the player's sockets (chat name) and their seat at the table at once. |
@@ -270,7 +274,8 @@ Editor/      tool that builds the scenes, UI art and placeholder sounds from cod
 | `BoardView` | Community cards, pot (counts up), street label, "next hand" message. |
 | **Panels/** `ActionBar` | Fold / Check-Call / Raise / All-in, raise slider, ½-pot and pot buttons. Only legal moves are clickable. |
 | `WaitingRoomPanel` | Friends tables before the start: players count, room code, copy code / link, share, host's **Start now**. |
-| `ResultPanel` | Win / lose / out-of-chips overlay (restart with 1,000 free chips). |
+| `ResultPanel` | Win / lose / out-of-chips overlay ("Buy in again" from the wallet). |
+| `WalletView`, `ShopPanel`, `ShopItemView` | The lobby's chip balance button and the demo shop. They show what the server sends and send only an item id. |
 | `HandRankingsPanel` | Hint chart: 10 hands with example cards, rules, and a mark on **your current hand**. |
 | **Presenters/** `HandResultPresenter` | Decides which result screen to show (once per hand) and highlights the winning cards. |
 | `MyHandPresenter` | Works out **your** current hand from your 2 cards + the board and shows it under your chips and in the chart. |

@@ -3,8 +3,8 @@
 [![Server CI](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml)
 
 A multiplayer Texas Hold'em prototype for 2 to 6 players, played with **virtual chips
-only**. There are no real money deposits, withdrawals or wagers, no purchases and no
-loot boxes. Players join a table from different devices, and **all game logic runs on
+only**. There are no real money deposits, withdrawals or wagers and no loot boxes. A
+**demo chip shop** adds chips for free so the economy can be tried; nothing is charged. Players join a table from different devices, and **all game logic runs on
 the server**.
 
 | Part | Technology |
@@ -160,7 +160,7 @@ Wi-Fi, or the hosted build above) and point `Server Url` at it, e.g.
 - **Join mid-hand:** a new player watches ("Dealt in next hand") and joins the next hand.
 - **Leave mid-hand:** the player is folded and their chips already bet stay in the pot.
 - **Side pots:** have two players go all-in for different amounts (e.g. after one has lost chips).
-- **Out of chips:** go all-in and lose. You become a spectator with a free "Restart with 1,000".
+- **Out of chips:** go all-in and lose. You become a spectator and can "Buy in again" with 1,000 chips from your wallet.
 - **Cheating:** the server rejects anything out of turn or against the rules (see
   `npm test` "actions out of turn or against the rules are rejected").
 - **Server down:** stop the server. Clients show "Connection lost. Reconnecting...".
@@ -219,8 +219,17 @@ so friends play each other. A bots table is not in the public list, but a friend
 with the code can join: they wait for the hand in progress to end (no one is
 dealt in or removed mid-hand), then replace the bot with the fewest chips.
 
-**Chips belong to a table.** Every player sits down with 1,000 chips. Busting out
-makes you a spectator with a free restart; nothing is ever sold.
+**Chip economy (wallet).** Every account starts with **10,000 chips** in a wallet that
+only the server can change (`WalletService`). Sitting down moves a 1,000-chip buy-in
+from the wallet to your seat (less if you hold less, never below 200); leaving moves your
+stack back. Busting out lets you buy in again from the wallet. The only ways chips are
+created are the starting grant and the **demo shop** (which charges nothing). Everything
+else is a transfer, so wallet plus chips on tables stays constant: there is a test that
+adds both up after real all-in hands. Clients never send amounts: they send "buy item
+`chips_small`" and the server looks up the price list. Protection against manipulation:
+whole non-negative numbers only, one wallet change at a time per player (no double
+spend), a purchase cooldown, a wallet ceiling, and a refund if the server restarts while
+you are seated. See `qa/reports/economy/`.
 
 **Client code structure.** `GameController` only coordinates. Each part of the screen
 has its own class (seats, board, panels, result, your hand, animations, sounds). All
@@ -263,7 +272,7 @@ editor tool, so the scenes are reproducible from code.
 | Short stack call → automatic all-in | `HoldemHand.applyAction` (tested) |
 | Bots, levels with different behaviour | `BotPlayer.js`: easy (calls a lot), normal (by strength), hard (tight, bigger raises, bluffs) |
 | Split pot, odd chip closest to the button | `pots.distributePots` (tested) |
-| Out of chips → spectator + free restart 1,000 | `Table.rebuy`, "Out of chips" screen, no purchase anywhere |
+| Out of chips → spectator + buy in again | `Table.rebuy` paid from the wallet (`WalletService`), "Out of chips" screen. The demo shop adds chips for free: no real money anywhere |
 | Disconnect mid-hand: auto fold after timeout, reconnect keeps state | Seat marked OFFLINE, turns time out; same seat and chips on return; seat freed after 2 min (`reconnectGrace.js`, e2e tested) |
 | Server disconnection: clear message | "Connection lost. Reconnecting..." banner; after a server restart the client explains the table was closed (see Known issues for what happens to bets) |
 | Cheating attempts rejected | Turn, action, amount and chips validated in the engine; payload validation in handlers (tested) |
@@ -286,12 +295,16 @@ editor tool, so the scenes are reproducible from code.
   are saved (MongoDB or JSON files) and survive. While the server is unreachable clients show *"Connection lost.
   Reconnecting..."*. When it comes back they reconnect automatically, are told *"The
   server restarted, so your table was closed. The hand in progress was not saved."*,
-  and return to the lobby, where a new table starts everyone at 1,000 chips again. A
+  and return to the lobby. Chips they had at that table are returned to their wallet
+  the next time they connect. A
   production version would keep table state in a database or Redis and refund
   unfinished hands.
-- **Chips carry between tables, but only in server memory.** Leave with 710 and you
-  sit down with 710. Out of chips (0) gives a fresh 1,000, as "Restart" does. A server
-  restart gives everyone 1,000 again.
+- **The shop is a demo.** It adds chips with no payment, limited to one purchase per
+  second per account and a wallet ceiling of 100,000,000. A real shop would need a payment
+  provider and receipt checking, which is out of scope.
+- **Chips at a table live in server memory.** Wallets are saved (MongoDB or JSON), but a
+  crash loses the hand in progress. The buy-in is refunded in full on the next login, so
+  chips are never lost, but chips won earlier in that session at the table are not kept.
 - **One live session per account.** Opening the game in a second tab signs the first
   tab out with the message "You signed in from another tab or device"; the seat is kept.
 - **Tested on desktop Chrome only;** mobile layout and other browsers are not verified.

@@ -135,7 +135,24 @@ people on real devices. Run it before every submission or release and fill in th
 |---|---|---|---|---|
 | W-01 | Play for 60 minutes (or lower `Wellbeing.FirstReminderMinutes` for the test) | Break reminder appears, can be dismissed | | |
 | W-02 | Turn break reminders off | No reminder | | |
-| W-03 | Look for any real-money wording or purchase | None ("Virtual chips only" in the lobby) | | |
+| W-03 | Look for any real-money wording or purchase | No real money anywhere; the shop says it is a demo and nothing is charged | | |
+
+## 12b. Chip wallet and shop
+The server rules for these are covered by `npm test` (see `qa/reports/economy/`); this checks the screens.
+
+| ID | Steps | Expected | Result | Notes |
+|---|---|---|---|---|
+| C-01 | Register a new account, open the lobby | Top bar shows **10,000 chips +** | | |
+| C-02 | Create a table (any mode) | Wallet drops by 1,000 (9,000); you sit with 1,000 | | |
+| C-03 | Leave the table | Wallet is back to 10,000 (plus or minus what you won or lost) | | |
+| C-04 | Click the wallet button | Shop opens: three items, prices say "(demo)", note says nothing is charged | | |
+| C-05 | Click **Get** on the first item | Green message, wallet +5,000; buttons are locked for about a second | | |
+| C-06 | Click **Get** twice very fast | Only one purchase happens | | |
+| C-07 | Lose all chips at a table, click **Buy in again** | Wallet drops by 1,000, you are dealt in next hand | | |
+| C-08 | Have under 200 chips in the wallet, try to sit down | Toast: "You need at least 200 chips ... Visit the shop."; no table opens | | |
+| C-09 | Same account in a second tab | First tab returns to login with "You signed in from another tab or device" | | |
+| C-10 | Close the tab mid-hand, come back within 2 minutes | Same seat and chips; wallet unchanged | | |
+| C-11 | Close the tab, wait over 2 minutes, log in | Not seated; wallet shows the stack you left with | | |
 
 ## 13. Look and feel
 | ID | Steps | Expected | Result | Notes |

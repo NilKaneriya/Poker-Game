@@ -38,8 +38,9 @@ visible to players, **Low** = cosmetic or internal.
 **Stack reset to 1,000 on every table join** (Medium)
 - **Cause:** `Table.addPlayer` always used the starting stack, so leaving and re-joining
   refilled a short stack without going through "Out of chips".
-- **Fix:** `services/ChipWallet.js` remembers chips when a player leaves; a busted player
-  (0) still gets 1,000. Test: `test/chipWallet.test.js`.
+- **Fix:** first a small in-memory memory of the stack, then replaced by the persistent
+  wallet (`services/WalletService.js`): chips move wallet -> seat -> wallet. Tests:
+  `test/wallet.test.js`, `test/economy.integration.test.js`.
 
 ### BUG-11
 **Leaving player's unmatched bet taken out of the pot** (Medium)
