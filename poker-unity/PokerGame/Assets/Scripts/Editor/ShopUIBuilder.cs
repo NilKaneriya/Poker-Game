@@ -49,7 +49,7 @@ namespace Poker.EditorTools
             name.rectTransform.Pin(TopLeft, 28, -16, 520, 32);
             var chips = MakeText(row, "Chips", "5,000 chips", 38, Theme.Gold, TextAlignmentOptions.Left, bold: true);
             chips.rectTransform.Pin(TopLeft, 28, -52, 520, 52);
-            var price = MakeText(row, "Price", "$0.99 (demo)", 22, Theme.Muted, TextAlignmentOptions.Right);
+            var price = MakeText(row, "Price", "Free (demo)", 22, Theme.Muted, TextAlignmentOptions.Right);
             price.rectTransform.Pin(new Vector2(1f, 0.5f), -214, 0, 200, 32);
             var get = MakeButton(row, "GetButton", ShopTexts.Get, Theme.Gold, Theme.Dark, 28, 18f);
             get.GetComponent<RectTransform>().Pin(new Vector2(1f, 0.5f), -28, 0, 170, 70);

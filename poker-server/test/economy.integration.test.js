@@ -370,7 +370,7 @@ test('shop: every item adds exactly its chips, and says it is a demo', async () 
   p.close();
 });
 
-test('shop: the catalog is sent to the client, with prices as plain labels', async () => {
+test('shop: the catalog is sent to the client, every item marked Free (demo)', async () => {
   const p = await (await Player.register(server)).connect();
   const catalog = await new Promise((resolve) => {
     p.socket.once('shopCatalog', resolve);

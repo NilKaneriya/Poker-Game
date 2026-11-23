@@ -18,7 +18,7 @@ Run it: `cd poker-server && npm test` (about 25 s).
 - Sitting down moves a buy-in (1,000, or what the wallet holds, minimum 200) from the wallet to the seat.
 - Leaving, or being removed after the 2-minute grace period, moves the stack back.
 - Out of chips: "Buy in again" takes another buy-in from the wallet.
-- The demo shop adds chips and charges nothing. It is the only source of chips besides the starting grant.
+- The demo shop gives free chips: no prices, no payment of any kind. It is the only source of chips besides the starting grant.
 
 ## What was tested
 
