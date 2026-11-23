@@ -451,6 +451,7 @@ namespace Poker.EditorTools
             var banner = BuildLostBanner(canvas, -110, "Connection lost. Reconnecting...");
             BuildConnectionStatus(top.transform, new Vector2(1f, 0.5f), -620, 0, banner);
             var lobbySettings = ProfileUIBuilder.BuildSettingsButton(top.transform, new Vector2(1f, 0.5f), -840, 0);
+            var walletButton = ShopUIBuilder.BuildWalletButton(top.transform, new Vector2(1f, 0.5f), -1040, 0, 320, 56); // your chips; opens the shop
 
             // Left column: create, join, how it works
             var create = Card(canvas, "CreateCard", Theme.Panel, 24f);
@@ -548,6 +549,7 @@ namespace Poker.EditorTools
             ProfileUIBuilder.BuildProfilePanel(canvas, profileCard, toast);
             ProfileUIBuilder.BuildSettingsPanel(canvas, lobbySettings);
             HandHistoryUIBuilder.BuildPanel(canvas, lobbyHistoryButton);
+            ShopUIBuilder.BuildPanel(canvas, walletButton);
             toast.transform.SetAsLastSibling(); // "Profile saved" shows above the panels
 
             AddSceneMusic(SoundId.MusicLobby);

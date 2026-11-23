@@ -68,9 +68,9 @@ namespace Poker.UI.Game
         public void ShowBusted(int startingChips)
         {
             Open(bustedColor, "Out of chips",
-                "You can keep watching this table, or start fresh. Chips are just for fun.",
+                "You can keep watching this table, or buy back in. The chips come from your wallet.",
                 "", null, busted: true);
-            rebuyButton.GetComponentInChildren<TMP_Text>().text = $"Restart with {CardFormat.Chips(startingChips)}";
+            rebuyButton.GetComponentInChildren<TMP_Text>().text = $"Buy in again  {CardFormat.Chips(startingChips)}";
         }
 
         /// <summary>Close at once, without the fade (used when the table changes).</summary>

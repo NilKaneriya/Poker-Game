@@ -50,6 +50,8 @@ namespace Poker.Core
             public const string ListTables = "listTables";
             public const string PlayerAction = "playerAction";
             public const string Rebuy = "rebuy";
+            public const string BuyItem = "buyItem";
+            public const string GetWallet = "getWallet";
 
             // Server -> Client
             public const string Session = "session";
@@ -57,6 +59,9 @@ namespace Poker.Core
             public const string TableList = "tableList";
             public const string TableState = "tableState";
             public const string Stats = "stats";
+            public const string Wallet = "wallet";
+            public const string ShopCatalog = "shopCatalog";
+            public const string ShopResult = "shopResult";
             public const string HandHistory = "handHistory";
             public const string ActionRejected = "actionRejected";
             public const string Error = "errorMessage";
@@ -438,6 +443,18 @@ namespace Poker.Core
         // Texts
         // =====================================================================
 
+        /// <summary>The dummy chip shop.</summary>
+        public static class ShopTexts
+        {
+            public const string Title = "Chip shop";
+            public const string Demo = "Demo shop: nothing is charged and no real money is used.";
+            public const string Wallet = "Your wallet: <color=#F6C744><b>{0}</b></color> chips";
+            public const string WalletButton = "{0} chips  +";
+            public const string Get = "Get";
+            public const string ItemChips = "{0} chips";
+            public const string Loading = "Loading...";
+        }
+
         /// <summary>Messages shown in the Lobby.</summary>
         public static class LobbyTexts
         {
@@ -447,7 +464,7 @@ namespace Poker.Core
             public const string BadCodeLength = "Table codes have {0} letters.";
             public const string TableWaiting = "  •  <color=#22C55E>Waiting for players</color>";
             public const string TableInHand = "  •  Hand in progress";
-            public const string FreeToPlay = "Virtual chips only  •  No real money  •  No purchases";
+            public const string FreeToPlay = "Virtual chips only  •  No real money  •  The shop is a demo";
 
             // Your stats
             public const string StatsTitle = "Your stats";

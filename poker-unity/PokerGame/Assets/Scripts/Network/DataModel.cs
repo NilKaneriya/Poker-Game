@@ -302,7 +302,44 @@ namespace Poker.Network
             public string message;
         }
 
+        /// <summary>Your chips outside any table (the wallet). Only the server changes it.</summary>
+        [Serializable]
+        public class WalletInfo
+        {
+            public int balance;
+        }
+
+        /// <summary>One thing in the dummy shop. The price is only a label: nothing is charged.</summary>
+        [Serializable]
+        public class ShopItem
+        {
+            public string id;
+            public string name;
+            public int chips;
+            public string price;
+        }
+
+        [Serializable]
+        public class ShopCatalog
+        {
+            public List<ShopItem> items;
+        }
+
+        [Serializable]
+        public class ShopResult
+        {
+            public bool ok;
+            public string itemId;
+            public string message;
+        }
+
         // ---------- Socket: Client -> Server ----------
+
+        [Serializable]
+        public class BuyItemRequest
+        {
+            public string itemId;
+        }
 
         [Serializable]
         public class CreateTableRequest

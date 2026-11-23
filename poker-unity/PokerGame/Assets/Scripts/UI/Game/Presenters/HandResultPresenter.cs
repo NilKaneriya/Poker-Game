@@ -38,7 +38,7 @@ namespace Poker.UI.Game
             int mySeat = state.you?.seat ?? -1;
             SeatInfo me = mySeat >= 0 ? state.seats[mySeat] : null;
 
-            // Out of chips and not playing the current hand: watch, or restart (no purchase, ever).
+            // Out of chips and not playing the current hand: watch, or buy in again from the wallet.
             bool playingThisHand = hand != null && hand.result == null && hand.seats.Exists(s => s.seat == mySeat);
             if (me != null && me.chips == 0 && !playingThisHand)
             {

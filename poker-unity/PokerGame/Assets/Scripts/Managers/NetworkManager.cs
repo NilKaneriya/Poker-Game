@@ -30,12 +30,19 @@ namespace Poker.Network
         public event Action<string> ServerErrorReceived;
         public event Action<PlayerStats> StatsReceived;
         public event Action<HandHistoryList> HandHistoryReceived;
+        public event Action<int> WalletReceived;               // chips outside any table
+        public event Action<ShopCatalog> ShopCatalogReceived;
+        public event Action<ShopResult> ShopResultReceived;
         /// <summary>We were at a table, but the server says we aren't any more (e.g. it restarted).</summary>
         public event Action TableLost;
 
         public bool IsConnected => sio != null && sio.Instance.IsConnected();
         public bool HasConnectedOnce { get; private set; }
         public TableState CurrentTable { get; private set; }
+
+        /// <summary>Last wallet balance the server sent (-1 until it has).</summary>
+        public int Wallet { get; private set; } = -1;
+        public ShopCatalog Catalog { get; private set; }
 
         private SocketIOCommunicator sio;
         private ServerConfig config;
@@ -74,6 +81,7 @@ namespace Poker.Network
         public void Disconnect()
         {
             CurrentTable = null;
+            Wallet = -1;
             HasConnectedOnce = false;
             sio.Instance.Close();
         }
@@ -83,6 +91,12 @@ namespace Poker.Network
         public void RequestTableList() => Emit(PokerEvents.ListTables);
 
         public void RequestStats() => Emit(PokerEvents.GetStats);
+
+        /// <summary>Ask for the wallet and the shop list again (both are also pushed on connect).</summary>
+        public void RequestWallet() => Emit(PokerEvents.GetWallet);
+
+        /// <summary>Dummy purchase. Only the item id is sent; the server decides the amount.</summary>
+        public void BuyItem(string itemId) => Emit(PokerEvents.BuyItem, new BuyItemRequest { itemId = itemId });
 
         public void RequestHandHistory() => Emit(PokerEvents.GetHandHistory);
 
@@ -165,6 +179,17 @@ namespace Poker.Network
                 if (lostTable) TableLost?.Invoke();
             });
             On<PlayerStats>(PokerEvents.Stats, stats => StatsReceived?.Invoke(stats));
+            On<WalletInfo>(PokerEvents.Wallet, wallet =>
+            {
+                Wallet = wallet.balance;
+                WalletReceived?.Invoke(wallet.balance);
+            });
+            On<ShopCatalog>(PokerEvents.ShopCatalog, catalog =>
+            {
+                Catalog = catalog;
+                ShopCatalogReceived?.Invoke(catalog);
+            });
+            On<ShopResult>(PokerEvents.ShopResult, result => ShopResultReceived?.Invoke(result));
             On<HandHistoryList>(PokerEvents.HandHistory, list => HandHistoryReceived?.Invoke(list));
             On<List<TableSummary>>(PokerEvents.TableList, list => TableListReceived?.Invoke(list));
             On<TableState>(PokerEvents.TableState, table =>
