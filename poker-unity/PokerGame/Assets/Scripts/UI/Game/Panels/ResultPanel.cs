@@ -73,6 +73,15 @@ namespace Poker.UI.Game
             rebuyButton.GetComponentInChildren<TMP_Text>().text = $"Restart with {CardFormat.Chips(startingChips)}";
         }
 
+        /// <summary>Close at once, without the fade (used when the table changes).</summary>
+        public void HideNow()
+        {
+            IsShowingBusted = false;
+            DG.Tweening.DOTween.Kill(group);
+            group.alpha = 0f;
+            group.gameObject.SetActive(false);
+        }
+
         public void Hide()
         {
             IsShowingBusted = false;
