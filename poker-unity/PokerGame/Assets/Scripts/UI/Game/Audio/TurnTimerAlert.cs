@@ -20,16 +20,18 @@ namespace Poker.UI.Game
         private float turnEndsAt;
         private int lastTicked = int.MaxValue;
 
-        /// <summary>Called with every snapshot.</summary>
-        public void Track(TableState state)
+        /// <summary>Called with every snapshot. Returns true when your turn has just started.</summary>
+        public bool Track(TableState state)
         {
             HandState hand = state.hand;
             int mySeat = state.you?.seat ?? -1;
             bool nowMyTurn = hand != null && hand.result == null && hand.legal != null && mySeat >= 0 && hand.currentSeat == mySeat;
 
             if (nowMyTurn) turnEndsAt = Time.time + hand.turnTimeLeftMs / 1000f;
-            if (nowMyTurn && !myTurn) lastTicked = int.MaxValue; // a new turn: tick again
+            bool started = nowMyTurn && !myTurn;
+            if (started) lastTicked = int.MaxValue; // a new turn: tick again
             myTurn = nowMyTurn;
+            return started;
         }
 
         private void Update()

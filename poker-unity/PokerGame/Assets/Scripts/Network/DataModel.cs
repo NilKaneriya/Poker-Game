@@ -90,7 +90,8 @@ namespace Poker.Network
         {
             public string playerId;
             public string username;
-            public string tableCode; // the table you are seated at; null if none (e.g. the server restarted)
+            public string tableCode; // the table you are seated at; null if none (seat released or the server restarted)
+            public string serverId;  // new every time the server starts: tells a released seat from a restart
         }
 
         /// <summary>Your own statistics (the game's one retention feature).</summary>

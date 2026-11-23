@@ -30,14 +30,18 @@ namespace Poker.Network
         public event Action<string> ServerErrorReceived;
         public event Action<PlayerStats> StatsReceived;
         public event Action<HandHistoryList> HandHistoryReceived;
-        /// <summary>We were at a table, but the server says we aren't any more (e.g. it restarted).</summary>
-        public event Action TableLost;
+        /// <summary>
+        /// We were at a table, but the server says we aren't any more. The argument is true when
+        /// the server restarted, false when our seat was released (away longer than the grace period).
+        /// </summary>
+        public event Action<bool> TableLost;
 
         public bool IsConnected => sio != null && sio.Instance.IsConnected();
         public bool HasConnectedOnce { get; private set; }
         public TableState CurrentTable { get; private set; }
 
         private SocketIOCommunicator sio;
+        private string serverId; // from the last session message
         private ServerConfig config;
 
         private void Awake()
@@ -160,9 +164,11 @@ namespace Poker.Network
             On<SessionInfo>(PokerEvents.Session, session =>
             {
                 bool lostTable = CurrentTable != null && session.tableCode != CurrentTable.code;
+                bool serverRestarted = serverId != null && session.serverId != serverId;
+                serverId = session.serverId;
                 if (lostTable) CurrentTable = null;
                 SessionStarted?.Invoke(session);
-                if (lostTable) TableLost?.Invoke();
+                if (lostTable) TableLost?.Invoke(serverRestarted);
             });
             On<PlayerStats>(PokerEvents.Stats, stats => StatsReceived?.Invoke(stats));
             On<HandHistoryList>(PokerEvents.HandHistory, list => HandHistoryReceived?.Invoke(list));

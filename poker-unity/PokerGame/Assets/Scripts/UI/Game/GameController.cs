@@ -47,6 +47,7 @@ namespace Poker.UI.Game
         [SerializeField] private ActionBar actionBar;
         [SerializeField] private ResultPanel resultPanel;
         [SerializeField] private HandRankingsPanel handRankingsPanel;
+        [SerializeField] private HandHistoryPanel handHistoryPanel; // closed when your turn starts, so the countdown stays in view
         [SerializeField] private Button handRankingsButton;
         [SerializeField] private ToastView toast;
         [SerializeField] private ChatPanel chat; // optional (chat module)
@@ -148,7 +149,8 @@ namespace Poker.UI.Game
             seatWait.Render(state);
             if (animator != null) animator.Play(previous, state);
             sounds.Play(previous, state);
-            if (timerAlert != null) timerAlert.Track(state);
+            bool turnStarted = timerAlert != null && timerAlert.Track(state);
+            if (turnStarted && handHistoryPanel != null && handHistoryPanel.IsOpen) handHistoryPanel.Close();
         }
 
         private void LeaveTable()
@@ -170,10 +172,10 @@ namespace Poker.UI.Game
             if (table != null && !table.started) waitingRoom.Render(table); // re-enable "Start now" after a refusal
         }
 
-        /// <summary>Reconnected, but the table is gone (the server restarted): explain and go back to the lobby.</summary>
-        private void OnTableLost()
+        /// <summary>Reconnected, but we are no longer at the table: explain why and go back to the lobby.</summary>
+        private void OnTableLost(bool serverRestarted)
         {
-            SceneNotice.Set(GameTexts.TableClosed);
+            SceneNotice.Set(serverRestarted ? GameTexts.TableClosed : GameTexts.SeatReleased);
             SceneManager.LoadScene(SceneNames.Lobby);
         }
 

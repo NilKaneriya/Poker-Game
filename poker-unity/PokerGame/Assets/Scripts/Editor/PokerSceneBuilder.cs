@@ -693,7 +693,7 @@ namespace Poker.EditorTools
             var chatEmoteButton = ReactionUIBuilder.BuildIconButton(chatToolSlot, emoteSet); // emotes from inside the chat window
             var rankings = BuildHandRankingsPanel(canvas);
             ProfileUIBuilder.BuildSettingsPanel(canvas, gameSettings);
-            HandHistoryUIBuilder.BuildPanel(canvas, gameHistoryButton);
+            var gameHistoryPanel = HandHistoryUIBuilder.BuildPanel(canvas, gameHistoryButton);
             var emotePicker = ReactionUIBuilder.BuildPicker(canvas, emoteSet); // on top of everything
 
             AddSceneMusic(SoundId.MusicTable);
@@ -701,7 +701,7 @@ namespace Poker.EditorTools
             var timerAlert = controller.gameObject.AddComponent<TurnTimerAlert>();
             // Countdown for your turn, drawn above every pop-up so it is never hidden (the server timer keeps running).
             var countdownPill = Panel(canvas, "TurnCountdown", Theme.Dark.WithAlpha(0.92f), 24f);
-            countdownPill.rectTransform.Pin(new Vector2(0.5f, 1f), 0, -96, 300, 52);
+            countdownPill.rectTransform.Pin(new Vector2(0.5f, 1f), 330, -96, 300, 52); // right of the top seat, clear of its cards
             var countdownText = MakeText(countdownPill.transform, "Text", "Your turn 30s", 26, Theme.Gold, bold: true);
             countdownText.rectTransform.Fill();
             countdownPill.gameObject.SetActive(false);
@@ -736,6 +736,7 @@ namespace Poker.EditorTools
             Wire(controller, "actionBar", actionBar);
             Wire(controller, "resultPanel", result);
             Wire(controller, "handRankingsPanel", rankings);
+            Wire(controller, "handHistoryPanel", gameHistoryPanel);
             Wire(controller, "handRankingsButton", rankingsButton);
             Wire(controller, "toast", toast);
             Wire(controller, "chat", chat);

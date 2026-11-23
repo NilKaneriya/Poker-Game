@@ -547,6 +547,7 @@ namespace Poker.Core
             // Connection
             public const string ConnectionLost = "Connection lost. Reconnecting... your seat and chips are kept for 2 minutes.";
             public const string TableClosed = "The server restarted, so your table was closed. The hand in progress was not saved. Create or join a table to keep playing.";
+            public const string SeatReleased = "You were away too long, so your seat was released. Create or join a table to keep playing.";
 
             // Waiting room
             public const string RoomStatus = "<color=#F6C744><b>{0}</b></color> of {1} players at the table";
