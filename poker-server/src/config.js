@@ -4,9 +4,19 @@ const path = require('path');
 const num = (value, fallback) => (value !== undefined && value !== '' ? Number(value) : fallback);
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// "*" must stay the plain string "*": the cors library treats an array as a list of exact
+// origins, so ["*"] never matches and browsers (WebGL) get no Access-Control-Allow-Origin.
+function parseCorsOrigin(value) {
+  const origins = (value || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return origins.length === 0 || origins.includes('*') ? '*' : origins;
+}
+
 module.exports = {
   port: num(process.env.PORT, 3000),
-  corsOrigin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()) : '*',
+  corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN),
 
   table: {
     minSeats: 2, // the host picks the table size in this range
