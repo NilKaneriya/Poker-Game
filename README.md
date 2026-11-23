@@ -289,8 +289,12 @@ editor tool, so the scenes are reproducible from code.
   and return to the lobby, where a new table starts everyone at 1,000 chips again. A
   production version would keep table state in a database or Redis and refund
   unfinished hands.
-- **Chips don't carry between tables.** Each table gives 1,000 chips. This is
-  intentional for a virtual-chips prototype, but it means leaving a table resets your stack.
+- **Chips carry between tables, but only in server memory.** Leave with 710 and you
+  sit down with 710. Out of chips (0) gives a fresh 1,000, as "Restart" does. A server
+  restart gives everyone 1,000 again.
+- **One live session per account.** Opening the game in a second tab signs the first
+  tab out with the message "You signed in from another tab or device"; the seat is kept.
+- **Tested on desktop Chrome only;** mobile layout and other browsers are not verified.
 - **Disconnected players slow the table for up to 2 minutes:** each of their turns
   waits out the 30 s timer before auto check/fold. After 2 minutes the seat is freed.
 - **A friends table never adds bots.** If everyone else leaves after the game
