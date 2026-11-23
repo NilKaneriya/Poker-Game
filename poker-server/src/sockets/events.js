@@ -19,5 +19,6 @@ module.exports = Object.freeze({
   TABLE_LIST: 'tableList',
   TABLE_STATE: 'tableState', //    public table snapshot (+ your own cards once hands run)
   ACTION_REJECTED: 'actionRejected', // { reason }
+  SIGNED_IN_ELSEWHERE: 'signedInElsewhere', // sent to an older tab/socket when the same account connects again; it is then disconnected
   ERROR: 'errorMessage', //        { message }
 });
