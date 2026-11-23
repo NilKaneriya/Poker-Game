@@ -26,9 +26,11 @@ each, and leave *Remember me* unticked), create a table in one and join it by co
 the others; see section 2. A requirement-by-requirement check against the task sheet is in
 [qa/reports/task-compliance.md](qa/reports/task-compliance.md).
 
-**Video:** a full 3-player hand, from the lobby to the showdown:
-[media/poker_3player_hand_demo.mp4](media/poker_3player_hand_demo.mp4) (6 MB; on GitHub,
-open the file to play it).
+**Video:** a full 3-player hand, from the lobby to the showdown.
+
+<video src="media/poker_3player_hand_demo.mp4" controls muted width="800"></video>
+
+If the player does not show, open [media/poker_3player_hand_demo.mp4](media/poker_3player_hand_demo.mp4).
 
 See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
