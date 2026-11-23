@@ -9,7 +9,7 @@ the server**.
 
 | Part | Technology |
 |---|---|
-| Client | Unity 2022.2.20f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
+| Client | Unity 2022.2.2f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
 | Networking | **Socket.IO v4**: Node server + the Firesplash Entertainment Socket.IO client in Unity (`Assets/Firesplash Entertainment`). Login over HTTP/JSON. |
 | Server | Node.js 18+, Express, Socket.IO |
 | Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set; JSON files otherwise |
@@ -63,7 +63,7 @@ The server listens on `http://localhost:3000`; `GET /health` returns `{"status":
 The start-up log says which one is used (`Player data: MongoDB ...` or `JSON files ...`).
 
 ### Client (Unity Editor)
-1. Open `poker-unity/PokerGame` with **Unity 2022.2.20f1**.
+1. Open `poker-unity/PokerGame` with **Unity 2022.2.2f1**.
 2. Run **Tools > Poker > Build Scenes** (needed the first time, and again after
    pulling changes to the UI). This imports TextMeshPro's essentials if needed, then
    generates the UI images and the placeholder sounds, creates the Splash, Lobby and
@@ -71,10 +71,19 @@ The start-up log says which one is used (`Player data: MongoDB ...` or `JSON fil
 3. The server address is set in `Assets/Resources/ServerConfig` (default `http://localhost:3000`).
 4. Open `Assets/Scene/Splash` and press **Play**. Create an account and sign in.
 
-### Playable build (one address for the game and the server)
-The server can also host the WebGL build, so one deployment gives a single link for
-both the game and the server. This also avoids browsers blocking an https page from
-talking to an http server.
+### WebGL build and hosting
+**One click:** **Poker > Build WebGL** builds into `Build/webgl` (not committed) with
+compression switched off, so it loads on any static host (Vercel, GitHub Pages,
+`python -m http.server`) without special headers. The server address baked into the build
+comes from `Assets/Resources/ServerConfig` (currently the hosted Render server).
+
+**How the submitted demo is hosted:** the WebGL build is a static site on Vercel, and
+the Node server runs on Render (a long-running process, which Socket.IO needs). On Render
+set `CORS_ORIGIN` to the exact Vercel address so browsers may connect. Both links are at
+the top of this README.
+
+**Alternative, one address for both:** the server can host the build itself, which also
+avoids browsers blocking an https page from talking to an http server.
 1. In `Assets/Resources/ServerConfig`, **clear `Server Url`**. An empty value makes a
    WebGL build talk to the address it was loaded from.
 2. **File > Build Settings > WebGL > Build**, output to `poker-server/public/`.
@@ -316,6 +325,11 @@ editor tool, so the scenes are reproducible from code.
   Android app from a link would need a deep-link intent filter, which is not configured.
 - **Layout** is designed for desktop landscape. It works on landscape phones but text
   is small on small screens; portrait is not supported.
+- **Cosmetic:** while cards are being dealt, a flying card can briefly cover a name plate.
+  In WebGL, text typed within about a second of clicking a field can land in the previously
+  focused field (the field now takes focus explicitly; not proven fixed in every browser).
+- **The long-session reminder** appears after 60 minutes (`Wellbeing.FirstReminderMinutes`);
+  lower that value to see it quickly. The off switch was checked, the 60 minute wait was not.
 - **Placeholder audio.** Sounds and music are synthesized by an editor tool and can be
   replaced in `Resources/SoundLibrary`. Browsers start audio only after the first click.
 - **Chat history is in memory** and goes when the table closes; it is not moderated
