@@ -86,27 +86,32 @@ class Table {
   }
 
   /** Seat a player in the first free seat. Returns the seat index, or -1 if full. */
-  addPlayer({ playerId, name, avatarId = 0, isBot = false }) {
+  addPlayer({ playerId, name, avatarId = 0, isBot = false, chips = this.startingChips }) {
     const existing = this.findSeat(playerId);
     if (existing !== -1) return existing;
     const seat = this.seats.indexOf(null);
     if (seat === -1) return -1;
-    this.seats[seat] = { playerId, name, avatarId, chips: this.startingChips, isBot, connected: true, sittingOut: false };
+    this.seats[seat] = { playerId, name, avatarId, chips, isBot, connected: true, sittingOut: false };
     return seat;
   }
 
-  /** Leave the table. If a hand is running they fold; chips already bet stay in the pot. */
+  /**
+   * Leave the table. If a hand is running they fold; chips already bet stay in the pot.
+   * @returns {number|null} the chips they walked away with (null if they had no seat)
+   */
   removePlayer(playerId) {
     this.waiting = this.waiting.filter((w) => w.playerId !== playerId);
     const seat = this.findSeat(playerId);
-    if (seat === -1) return;
+    if (seat === -1) return null;
     if (this.hand && !this.hand.isComplete) {
       this.hand.foldOutOfTurn(playerId);
       this.syncChips();
     }
+    const chips = this.seats[seat].chips;
     this.seats[seat] = null;
     // The host left: hand the role to the next human still seated.
     if (this.hostId === playerId) this.hostId = this.players.find((p) => !p.isBot)?.playerId ?? null;
+    return chips;
   }
 
   /** Players with chips who can be dealt into the next hand. Busted players watch. */

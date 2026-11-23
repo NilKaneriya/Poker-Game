@@ -1,5 +1,6 @@
 const tables = require('../services/TableManager');
 const log = require('../utils/logger');
+const wallet = require('../services/ChipWallet');
 const { sendTableList } = require('../sockets/broadcast');
 const gameEvents = require('./gameEvents');
 const { GAME_EVENTS } = gameEvents;
@@ -15,7 +16,8 @@ function removeFromTable(io, playerId, name) {
   const table = tables.findByPlayer(playerId);
   if (!table) return null;
 
-  table.removePlayer(playerId);
+  const chips = table.removePlayer(playerId);
+  if (chips !== null && !playerId.startsWith('bot-')) wallet.save(playerId, chips);
   log.info(`${name} left table ${table.code}`);
 
   if (table.humanCount === 0) {
