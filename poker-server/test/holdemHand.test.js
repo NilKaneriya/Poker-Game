@@ -357,3 +357,12 @@ test('300 random hands: chips are conserved, stacks never go negative, hands alw
     if (hand.stage === STAGES.SHOWDOWN) assert.equal(hand.board.length, 5);
   }
 });
+
+test('big blind leaves before the small blind acts: the small blind wins both blinds (30)', () => {
+  const hand = makeHand({ stacks: [1000, 1000] }); // p0 = button/small blind, p1 = big blind
+  hand.foldOutOfTurn('p1');
+  assert.equal(hand.isComplete, true);
+  assert.equal(hand.result.winners[0].playerId, 'p0');
+  assert.equal(hand.result.winners[0].amount, 30);
+  assert.equal(hand.getPlayer('p0').stack, 1020);
+});
