@@ -1,6 +1,6 @@
 # Multiplayer Texas Hold'em
 
-[![Server CI](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml)
+[![Server CI](https://github.com/NilKaneriya/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/NilKaneriya/Poker-Game/actions/workflows/server.yml)
 
 A multiplayer Texas Hold'em prototype for 2 to 6 players, played with **virtual chips
 only**. There are no real money deposits, withdrawals or wagers, no purchases and no
@@ -14,9 +14,10 @@ the server**.
 | Server | Node.js 18+, Express, Socket.IO |
 | Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set; JSON files otherwise |
 
-**Target layout:** desktop, landscape (designed at 1920x1080 and scaling to any
-landscape window, in the browser via WebGL or as a Windows build). It also runs on
-Android phones and tablets in landscape, but the layout is tuned for desktop.
+**Target layout:** desktop, landscape (designed at 1920x1080 and scaling to the window
+in a Windows build). In the browser the WebGL page uses Unity's default template: a
+960x600 canvas with a full-screen button at the bottom right. An Android build runs in
+landscape, but the layout is tuned for desktop and phones were not tested.
 
 **Play it now (WebGL):** https://webgl-sooty.vercel.app (the game; it talks to the Socket.IO
 server at https://poker-game-zw79.onrender.com). The server runs on a free host, so the
@@ -312,13 +313,21 @@ editor tool, so the scenes are reproducible from code.
   server restarted, so your table was closed. The hand in progress was not saved."*,
   and return to the lobby, where a new table starts everyone at 1,000 chips again. A
   production version would keep table state in a database or Redis and refund
-  unfinished hands.
+  unfinished hands. The server sends a new id each time it starts, which is how the
+  client tells a restart apart from a released seat (next point). The automated tests
+  cover this, but a restart of the hosted server was not watched live in the browser test.
+- **Away longer than 2 minutes:** the seat is released and the player is told *"You were
+  away too long, so your seat was released."* (Before this fix the message wrongly said
+  the server had restarted.)
 - **Chips carry between tables, but only in server memory.** Leave with 710 and you
   sit down with 710. Out of chips (0) gives a fresh 1,000, as "Restart" does. A server
   restart gives everyone 1,000 again.
 - **One live session per account.** Opening the game in a second tab signs the first
   tab out with the message "You signed in from another tab or device"; the seat is kept.
 - **Tested on desktop Chrome only;** mobile layout and other browsers are not verified.
+- **Hosted demo data:** a redeploy of the hosted server on 23 Nov 2026 reset accounts,
+  player IDs and stats, so player data on the hosted server did not survive that redeploy.
+  Set `MONGODB_URI` on the host so it does.
 - **Disconnected players slow the table for up to 2 minutes:** each of their turns
   waits out the 30 s timer before auto check/fold. After 2 minutes the seat is freed.
 - **A friends table never adds bots.** If everyone else leaves after the game
@@ -333,7 +342,10 @@ editor tool, so the scenes are reproducible from code.
   is small on small screens; portrait is not supported.
 - **Cosmetic:** while cards are being dealt, a flying card can briefly cover a name plate.
   In WebGL, text typed within about a second of clicking a field can land in the previously
-  focused field (the field now takes focus explicitly; not proven fixed in every browser).
+  focused field, and a Create or Join click right after typing can be ignored (click again).
+  The field now takes focus explicitly, but the retest still saw it.
+- **Turn countdown and pop-ups:** the "Your turn Ns" countdown is drawn above every
+  pop-up, and the Hand history panel closes by itself when your turn starts.
 - **The long-session reminder** appears after 60 minutes (`Wellbeing.FirstReminderMinutes`);
   lower that value to see it quickly. The off switch was checked, the 60 minute wait was not.
 - **Placeholder audio.** Sounds and music are synthesized by an editor tool and can be

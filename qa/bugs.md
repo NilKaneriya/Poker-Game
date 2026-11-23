@@ -6,6 +6,7 @@ visible to players, **Low** = cosmetic or internal.
 
 | ID | Title | Severity | Found by | Status |
 |---|---|---|---|---|
+| [BUG-14](#bug-14) | Retest: wrong "server restarted" message after the 2-minute grace period; History could hide the turn countdown; countdown over the top seat; cut-off notice; 1-seat request made a 6-seat table | Low | Retest report (WebGL) | Fixed in code, needs a new build to retest |
 | [BUG-13](#bug-13) | Typed raise amount ignored until Enter; "RAISE" shown for an opening bet; "You posts" grammar; room code accepted spaces | Low | Browser test (WebGL) | Fixed |
 | [BUG-12](#bug-12) | Stack reset to 1,000 on every table join | Medium | Browser test (WebGL) | Fixed |
 | [BUG-11](#bug-11) | Leaving player's unmatched bet taken out of the pot | Medium | Browser test (WebGL) | Fixed |
@@ -21,6 +22,22 @@ visible to players, **Low** = cosmetic or internal.
 | [BUG-01](#bug-01) | Express error handler would be ignored if its unused argument was removed | Low | ESLint | Kept, documented |
 
 ---
+
+### BUG-14
+**Leftovers from the retest** (Low)
+- **Found by:** the retest of the new build ([report](reports/2026-11-23-retest.md), report bugs 6 and 9 plus new findings).
+  BUG-13 had marked bugs 6 and 9 as fixed; the retest showed they were not.
+- **Fixes:**
+  - The server sends a `serverId` (new on every start) with `session`. A client that lost its
+    table shows "You were away too long, so your seat was released" when the id is unchanged,
+    and "The server restarted..." only when it changed (`NetworkManager`, `GameController`).
+  - The toast grows taller for long text instead of cutting it off (`ToastView`).
+  - Hand history closes by itself when your turn starts (`GameController`, `TurnTimerAlert.Track`
+    now reports a new turn), and the "Your turn" countdown moved right of the top seat
+    (`PokerSceneBuilder`), so it no longer covers that seat's cards.
+  - Seat counts are clamped: 1 seat gives a 2-seat table, 9 gives 6 (`lobbyHandlers.cleanSeatCount`).
+- **Tests:** `scripts/test-client.js` checks the 1-seat clamp and the `serverId` in `session`.
+- **Still open:** WebGL input focus (report bug 5), see README Known issues.
 
 ### BUG-13
 **Small UI and label bugs** (Low)
