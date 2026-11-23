@@ -135,7 +135,7 @@ namespace Poker.Network
             io.On(PokerEvents.SocketConnectError, reason =>
             {
                 Debug.LogWarning($"[Network] Connect error: {reason}");
-                if (reason != null && reason.Contains("unauthorized"))
+                if (reason != null && reason.IndexOf("unauthorized", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     // Token expired or revoked: stop retrying and send the player to log in again.
                     sio.Instance.Close();
@@ -150,6 +150,13 @@ namespace Poker.Network
                 Disconnected?.Invoke(reason);
             });
 
+            // The same account signed in somewhere else (e.g. another tab): this one is closed.
+            On<ServerError>(PokerEvents.SignedInElsewhere, info =>
+            {
+                SceneNotice.Set(string.IsNullOrEmpty(info?.message) ? "You signed in from another tab or device." : info.message);
+                sio.Instance.Close();
+                AuthRejected?.Invoke();
+            });
             On<SessionInfo>(PokerEvents.Session, session =>
             {
                 bool lostTable = CurrentTable != null && session.tableCode != CurrentTable.code;

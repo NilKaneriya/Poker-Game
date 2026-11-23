@@ -177,7 +177,7 @@ namespace Poker.UI.Splash
         {
             Auth.ClearSession();
             ShowLoginForm();
-            ShowLoginError("Your session expired. Please sign in again.");
+            ShowLoginError(SceneNotice.Take() ?? "Your session expired. Please sign in again.");
         }
 
         // ---------- View helpers ----------

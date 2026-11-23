@@ -53,6 +53,7 @@ namespace Poker.Core
 
             // Server -> Client
             public const string Session = "session";
+            public const string SignedInElsewhere = "signedInElsewhere";
             public const string TableList = "tableList";
             public const string TableState = "tableState";
             public const string Stats = "stats";
