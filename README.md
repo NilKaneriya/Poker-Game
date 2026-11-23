@@ -26,6 +26,10 @@ each, and leave *Remember me* unticked), create a table in one and join it by co
 the others; see section 2. A requirement-by-requirement check against the task sheet is in
 [qa/reports/task-compliance.md](qa/reports/task-compliance.md).
 
+**Video:** a full 3-player hand, from the lobby to the showdown:
+[media/poker_3player_hand_demo.mp4](media/poker_3player_hand_demo.mp4) (6 MB; on GitHub,
+open the file to play it).
+
 See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
 ---
@@ -375,7 +379,6 @@ are on screen). The poker table's glue is two small classes in `UI/Game/Reaction
 - Leaderboards and other competitive retention features: the brief asks for one
   responsible retention feature (stats), so the profile only shows facts.
 - Persistent tables and refunds after a server crash (see Known issues).
-- Gameplay video (record a 3-player hand following section 2).
 
 ---
 

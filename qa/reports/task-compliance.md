@@ -86,7 +86,7 @@ or in the browser test, no automated test.
 | Link to run the game | WebGL: https://webgl-sooty.vercel.app with the server on Render (free host: first request can be slow) |
 | Full source on GitHub | Yes |
 | README: how to run, how to test multiplayer, design decisions, known issues | Yes (sections 1-5) |
-| Short video of a full 3-player hand | Not made yet (optional) |
+| Short video of a full 3-player hand | Yes: `media/poker_3player_hand_demo.mp4`, linked from the README |
 | Networking service documented | Socket.IO, in the README table |
 
 ## Optional extras (not scored)

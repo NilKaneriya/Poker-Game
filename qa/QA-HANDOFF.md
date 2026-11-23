@@ -60,7 +60,6 @@ error message stays inside the card.
 ## Not covered by this build
 
 - Mobile layout and portrait (desktop landscape only).
-- Gameplay video (optional deliverable).
 
 ## Reporting
 
