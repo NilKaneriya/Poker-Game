@@ -26,6 +26,16 @@ module.exports = {
     bigBlind: num(process.env.BIG_BLIND, 20),
   },
 
+  // Chip economy (src/services/WalletService.js). Chips live in a wallet per account; sitting
+  // down moves a buy-in from the wallet to the table, leaving moves the stack back.
+  economy: {
+    startingBalance: num(process.env.STARTING_BALANCE, 10000), // every new account
+    minBuyIn: 200, //          least chips you can sit down with (10 big blinds)
+    maxBalance: 100000000, //  wallet ceiling, so no amount can overflow or be farmed forever
+    purchaseCooldownMs: 1000, // shop: at most one purchase per second per account
+    recentLedger: 30, //       transactions kept on each wallet, for support and tests
+  },
+
   turnTimeoutMs: num(process.env.TURN_TIMEOUT_MS, 30000),
   authRateMax: num(process.env.AUTH_RATE_MAX, 10), // login/register attempts per IP per minute
   timing: {

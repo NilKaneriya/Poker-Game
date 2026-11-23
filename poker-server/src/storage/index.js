@@ -34,6 +34,7 @@ async function createMongoStorage(uri, dbName) {
     kind: 'mongodb',
     users: new MongoCollection(db.collection('users')),
     tokens: new MongoCollection(db.collection('tokens')),
+    wallets: new MongoCollection(db.collection('wallets')),
     stats: new MongoCollection(db.collection('stats')),
     handHistory: new MongoCollection(db.collection('handHistory')),
     close: () => client.close(),
@@ -46,6 +47,7 @@ function createJsonStorage(dataDir) {
   const collections = {
     users: new JsonCollection(file('users')),
     tokens: new JsonCollection(file('tokens')),
+    wallets: new JsonCollection(file('wallets')),
     stats: new JsonCollection(file('stats')),
     handHistory: new JsonCollection(file('handHistory')),
   };
