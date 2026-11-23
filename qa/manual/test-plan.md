@@ -145,7 +145,7 @@ The server rules for these are covered by `npm test` (see `qa/reports/economy/`)
 | C-01 | Register a new account, open the lobby | Top bar shows **10,000 chips +** | | |
 | C-02 | Create a table (any mode) | Wallet drops by 1,000 (9,000); you sit with 1,000 | | |
 | C-03 | Leave the table | Wallet is back to 10,000 (plus or minus what you won or lost) | | |
-| C-04 | Click the wallet button | Shop opens: three items, prices say "(demo)", note says nothing is charged | | |
+| C-04 | Click the wallet button | Shop opens: three items, each marked "Free (demo)", note says nothing is charged | | |
 | C-05 | Click **Get** on the first item | Green message, wallet +5,000; buttons are locked for about a second | | |
 | C-06 | Click **Get** twice very fast | Only one purchase happens | | |
 | C-07 | Lose all chips at a table, click **Buy in again** | Wallet drops by 1,000, you are dealt in next hand | | |

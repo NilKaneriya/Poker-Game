@@ -1,12 +1,12 @@
 /**
- * The dummy shop. Prices are only labels: nothing is charged and no payment is taken.
+ * The dummy shop: free demo chips only. There are no prices and no payment of any kind.
  * The server owns this list; clients send an item id and nothing else, so a client can
  * never choose an amount or a price.
  */
 const ITEMS = Object.freeze([
-  Object.freeze({ id: 'chips_small', name: 'Handful of chips', chips: 5000, price: '$0.99 (demo)' }),
-  Object.freeze({ id: 'chips_medium', name: 'Stack of chips', chips: 25000, price: '$3.99 (demo)' }),
-  Object.freeze({ id: 'chips_large', name: 'Chip tower', chips: 100000, price: '$9.99 (demo)' }),
+  Object.freeze({ id: 'chips_small', name: 'Handful of chips', chips: 5000, price: 'Free (demo)' }),
+  Object.freeze({ id: 'chips_medium', name: 'Stack of chips', chips: 25000, price: 'Free (demo)' }),
+  Object.freeze({ id: 'chips_large', name: 'Chip tower', chips: 100000, price: 'Free (demo)' }),
 ]);
 
 const byId = new Map(ITEMS.map((item) => [item.id, item]));
