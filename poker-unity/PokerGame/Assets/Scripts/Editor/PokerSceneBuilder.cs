@@ -350,26 +350,30 @@ namespace Poker.EditorTools
 
             // Login form
             var login = Card(canvas, "LoginForm", Theme.Panel, 26f);
-            login.rectTransform.At(0, -175, 620, 600);
+            // Card is 660 tall (centre 0, top +330). Rows are laid out top to bottom with fixed
+            // gaps (label 8 px above its field, 22 px between rows) so nothing overlaps.
+            login.rectTransform.At(0, -165, 620, 660);
             var loginGroup = Group(login, 0f);
-            MakeText(login.transform, "Header", "Sign in to play", 40, Theme.Text, bold: true).rectTransform.At(0, 240, 560, 56);
-            MakeText(login.transform, "UsernameLabel", "Username", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 178, 520, 30);
+            MakeText(login.transform, "Header", "Sign in to play", 40, Theme.Text, bold: true).rectTransform.At(0, 274, 560, 52);   // 300..248
+            MakeText(login.transform, "UsernameLabel", "Username", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 219, 520, 26); // 232..206
             var username = MakeInput(login.transform, "UsernameInput", "3-16 letters, numbers or _");
-            username.GetComponent<RectTransform>().At(0, 135, 520, 66);
+            username.GetComponent<RectTransform>().At(0, 168, 520, 60);                                                                // 198..138
             username.characterLimit = 16;
-            MakeText(login.transform, "PasswordLabel", "Password", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 73, 520, 30);
+            MakeText(login.transform, "PasswordLabel", "Password", 22, Theme.Muted, TextAlignmentOptions.Left).rectTransform.At(0, 103, 520, 26);  // 116..90
             var password = MakeInput(login.transform, "PasswordInput", "At least 6 characters");
-            password.GetComponent<RectTransform>().At(0, 30, 520, 66);
+            password.GetComponent<RectTransform>().At(0, 52, 520, 60);                                                                 // 82..22
             password.contentType = TMP_InputField.ContentType.Password;
             password.characterLimit = 64;
             var remember = MakeToggle(login.transform, "RememberMe", "Remember me on this device", true);
-            remember.GetComponent<RectTransform>().At(0, -42, 520, 44);
+            remember.GetComponent<RectTransform>().At(0, -22, 520, 44);                                                                // 0..-44
             var loginButton = MakeButton(login.transform, "LoginButton", "Log in", Theme.Gold, Theme.Dark, 30);
-            loginButton.GetComponent<RectTransform>().At(0, -122, 520, 74);
+            loginButton.GetComponent<RectTransform>().At(0, -101, 520, 70);                                                            // -66..-136
             var registerButton = MakeButton(login.transform, "RegisterButton", "Create account", Theme.PanelLight, Theme.Text, 26);
-            registerButton.GetComponent<RectTransform>().At(0, -205, 520, 62);
+            registerButton.GetComponent<RectTransform>().At(0, -180, 520, 60);                                                         // -150..-210
+            // Error line: room for two wrapped lines, kept inside the card's side padding.
             var error = MakeText(login.transform, "Error", "", 22, Theme.Red);
-            error.rectTransform.At(0, -265, 560, 34);
+            error.rectTransform.At(0, -254, 520, 56);                                                                                  // -226..-282
+            error.overflowMode = TextOverflowModes.Overflow;
             login.gameObject.SetActive(false);
 
             AddSceneMusic(SoundId.MusicLobby);
