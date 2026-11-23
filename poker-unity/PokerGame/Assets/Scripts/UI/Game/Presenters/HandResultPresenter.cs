@@ -15,6 +15,7 @@ namespace Poker.UI.Game
         private readonly BoardView board;
         private readonly SeatsView seats;
         private int resultShownForHand = -1;
+        private string tableCode;
 
         public HandResultPresenter(ResultPanel panel, BoardView board, SeatsView seats)
         {
@@ -25,6 +26,14 @@ namespace Poker.UI.Game
 
         public void Render(TableState state)
         {
+            // A different table: forget the old table's result so its pop-up can never show here.
+            if (state.code != tableCode)
+            {
+                tableCode = state.code;
+                resultShownForHand = -1;
+                panel.HideNow();
+            }
+
             HandState hand = state.hand;
             int mySeat = state.you?.seat ?? -1;
             SeatInfo me = mySeat >= 0 ? state.seats[mySeat] : null;

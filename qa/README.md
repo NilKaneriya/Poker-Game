@@ -11,6 +11,7 @@ qa/
   load-test/load-test.js     load test: hundreds of players and bots at once
   scripts/run-all.js         runs every automated check and saves a report
   reports/automated/         one report per run of run-all.js
+  reports/task-compliance.md every line of the task sheet checked against code, tests and the browser test
   reports/load-test/         one report per load test run (before / after fixes)
   package.json               npm run test:all, npm run load-test
 ```

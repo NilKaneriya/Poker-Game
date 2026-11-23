@@ -72,7 +72,7 @@ namespace Poker.UI.Lobby
             }
 
             codeInput.characterLimit = GameRules.TableCodeLength;
-            codeInput.onValueChanged.AddListener(v => codeInput.SetTextWithoutNotify(v.ToUpperInvariant()));
+            codeInput.onValueChanged.AddListener(v => codeInput.SetTextWithoutNotify(CleanCode(v)));
             codeInput.onSubmit.AddListener(_ => JoinByCode());
 
             SetUpCreateOptions();
@@ -172,6 +172,14 @@ namespace Poker.UI.Lobby
         }
 
         // ---------- Join ----------
+
+        /// <summary>Room codes are upper-case letters and digits only (no spaces).</summary>
+        private static string CleanCode(string value)
+        {
+            var sb = new System.Text.StringBuilder(value.Length);
+            foreach (char c in value) if (char.IsLetterOrDigit(c)) sb.Append(char.ToUpperInvariant(c));
+            return sb.ToString();
+        }
 
         private void JoinByCode()
         {

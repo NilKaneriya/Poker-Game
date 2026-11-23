@@ -179,6 +179,7 @@ class HoldemHand {
 
     const stage = this.stage;
     const before = p.totalBet;
+    const isOpeningBet = action === ACTIONS.RAISE && this.currentBet === 0; // shown as BET, not RAISE
     switch (action) {
       case ACTIONS.FOLD:
         p.folded = true;
@@ -202,9 +203,10 @@ class HoldemHand {
         return fail('Unknown action');
     }
 
-    p.lastAction = p.allIn && action !== ACTIONS.FOLD ? ACTIONS.ALL_IN : action;
+    const loggedAction = p.allIn && action !== ACTIONS.FOLD ? ACTIONS.ALL_IN : action;
+    p.lastAction = isOpeningBet && loggedAction === ACTIONS.RAISE ? 'bet' : loggedAction;
     p.hasActed = true;
-    this.log.push({ stage, playerId, action: p.lastAction, amount: p.totalBet - before, total: p.bet });
+    this.log.push({ stage, playerId, action: loggedAction, amount: p.totalBet - before, total: p.bet });
     this.afterAction();
     return { ok: true };
   }
@@ -319,6 +321,7 @@ class HoldemHand {
     const excess = bets[0] - (bets[1] ?? 0);
     if (excess <= 0) return;
     const top = this.players.find((p) => p.bet === bets[0]);
+    if (top.folded) return; // the biggest bettor left: their chips stay in the pot as dead money
     top.stack += excess;
     top.bet -= excess;
     top.totalBet -= excess;

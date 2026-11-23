@@ -13,9 +13,22 @@ namespace Poker.UI
         private void Awake()
         {
             var input = GetComponent<TMP_InputField>();
-            input.onSelect.AddListener(_ => Fade(1f));
+            input.onSelect.AddListener(_ =>
+            {
+                Fade(1f);
+#if UNITY_WEBGL && !UNITY_EDITOR
+                // WebGL keeps typing in the previously focused box for a moment; focus this one explicitly.
+                StartCoroutine(FocusNextFrame(input));
+#endif
+            });
             input.onDeselect.AddListener(_ => Fade(0f));
             ring.alpha = 0f;
+        }
+
+        private System.Collections.IEnumerator FocusNextFrame(TMP_InputField input)
+        {
+            yield return null;
+            if (input != null && input.isActiveAndEnabled) input.ActivateInputField();
         }
 
         private void OnDisable()

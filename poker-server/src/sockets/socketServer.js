@@ -25,8 +25,16 @@ module.exports = (io) => {
     }
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     const { playerId, name } = socket.data;
+
+    // One live session per account: an older tab/socket is told and disconnected, so it
+    // can't keep showing a seat it no longer controls. The seat itself stays (same player).
+    const older = (await io.in(playerRoom(playerId)).fetchSockets()).filter((s) => s.id !== socket.id);
+    for (const old of older) {
+      old.emit(EVENTS.SIGNED_IN_ELSEWHERE, { message: 'You signed in from another tab or device.' });
+      old.disconnect(true);
+    }
     socket.join(playerRoom(playerId));
     log.info(`Connected ${name} (socket ${socket.id})`);
 

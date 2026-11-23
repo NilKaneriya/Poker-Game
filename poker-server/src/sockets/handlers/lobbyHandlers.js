@@ -3,6 +3,7 @@ const config = require('../../config');
 const { TABLE_MODES } = require('../../engine/constants');
 const tables = require('../../services/TableManager');
 const log = require('../../utils/logger');
+const wallet = require('../../services/ChipWallet');
 const handHistory = require('../../services/HandHistoryService');
 const { tableRoom, sendTableList, sendStats } = require('../broadcast');
 const gameEvents = require('../../game/gameEvents');
@@ -38,7 +39,7 @@ module.exports = (io, socket) => {
 
   function seat(table) {
     const { name } = me();
-    const seatIndex = table.addPlayer(me());
+    const seatIndex = table.addPlayer({ ...me(), chips: wallet.stackFor(playerId, table.startingChips) });
     if (seatIndex === -1) return fail('Table is full');
     socket.join(tableRoom(table.code));
     log.info(`${name} sat at ${table.code} seat ${seatIndex}`);

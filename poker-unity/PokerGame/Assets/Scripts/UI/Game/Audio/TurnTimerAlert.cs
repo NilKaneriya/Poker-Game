@@ -1,4 +1,5 @@
 using Poker.Audio;
+using TMPro;
 using UnityEngine;
 using static Poker.Core.Constants;
 using static Poker.Network.DataModel;
@@ -11,6 +12,10 @@ namespace Poker.UI.Game
     /// </summary>
     public class TurnTimerAlert : MonoBehaviour
     {
+        [Header("Countdown (optional, always on top of pop-ups)")]
+        [SerializeField] private GameObject countdownRoot;
+        [SerializeField] private TMP_Text countdownText;
+
         private bool myTurn;
         private float turnEndsAt;
         private int lastTicked = int.MaxValue;
@@ -29,7 +34,15 @@ namespace Poker.UI.Game
 
         private void Update()
         {
+            if (countdownRoot != null) countdownRoot.SetActive(myTurn);
             if (!myTurn) return;
+
+            int left = Mathf.Max(0, Mathf.CeilToInt(turnEndsAt - Time.time));
+            if (countdownText != null)
+            {
+                countdownText.text = $"Your turn  {left}s";
+                countdownText.color = left <= SoundCueTimings.TimerAlertSeconds ? new Color(0.95f, 0.3f, 0.3f) : new Color(0.97f, 0.76f, 0.2f);
+            }
 
             int secondsLeft = Mathf.CeilToInt(turnEndsAt - Time.time);
             if (secondsLeft <= 0 || secondsLeft > SoundCueTimings.TimerAlertSeconds || secondsLeft >= lastTicked) return;

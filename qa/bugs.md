@@ -6,6 +6,10 @@ visible to players, **Low** = cosmetic or internal.
 
 | ID | Title | Severity | Found by | Status |
 |---|---|---|---|---|
+| [BUG-13](#bug-13) | Typed raise amount ignored until Enter; "RAISE" shown for an opening bet; "You posts" grammar; room code accepted spaces | Low | Browser test (WebGL) | Fixed |
+| [BUG-12](#bug-12) | Stack reset to 1,000 on every table join | Medium | Browser test (WebGL) | Fixed |
+| [BUG-11](#bug-11) | Leaving player's unmatched bet taken out of the pot | Medium | Browser test (WebGL) | Fixed |
+| [BUG-10](#bug-10) | Same account in two tabs: seat lost silently, banner stuck on "Reconnecting..." | High | Browser test (WebGL) | Fixed |
 | [BUG-09](#bug-09) | End-to-end test crashed in cleanup on Linux after passing | Low (test) | First CI run (GitHub Actions) | Fixed |
 | [BUG-08](#bug-08) | Stats and hand history lost updates when two hands ended together | High | End-to-end test on MongoDB | Fixed |
 | [BUG-07](#bug-07) | JSON storage blocked the server for up to 0.7 s under load | Medium | Load test | Fixed |
@@ -17,6 +21,40 @@ visible to players, **Low** = cosmetic or internal.
 | [BUG-01](#bug-01) | Express error handler would be ignored if its unused argument was removed | Low | ESLint | Kept, documented |
 
 ---
+
+### BUG-13
+**Small UI and label bugs** (Low)
+- **Found by:** the two-player WebGL browser test (report bugs 4, 5, 8).
+- **Also fixed (report bugs 6, 7, 9, 10):** an always-on-top "Your turn Ns" countdown
+  (`TurnTimerAlert`); Leave is drawn above the result pop-up (`PokerSceneBuilder`); the
+  result panel resets when the table changes (`HandResultPresenter`); the emote panel grid
+  sits right under the player chips (`ReactionUIBuilder`); WebGL text fields focus
+  explicitly on click (`InputFocusHighlight`).
+- **Fixes:** the raise button and slider follow every typed digit (`ActionBar`); the first
+  bet of a street is labelled BET (`HoldemHand.applyAction`); history lines say "You post /
+  fold / check" (`HandHistoryFormat`); the room code keeps only letters and digits.
+
+### BUG-12
+**Stack reset to 1,000 on every table join** (Medium)
+- **Cause:** `Table.addPlayer` always used the starting stack, so leaving and re-joining
+  refilled a short stack without going through "Out of chips".
+- **Fix:** `services/ChipWallet.js` remembers chips when a player leaves; a busted player
+  (0) still gets 1,000. Test: `test/chipWallet.test.js`.
+
+### BUG-11
+**Leaving player's unmatched bet taken out of the pot** (Medium)
+- **Cause:** when the big blind left before the small blind acted, `returnUncalledBet`
+  gave the 10 extra back to the folded, gone player. The pot dropped from 30 to 20.
+- **Fix:** an uncalled bet is only returned to a player still in the hand; otherwise it
+  stays as dead money. Test: `holdemHand.test.js` ("big blind leaves before ...").
+
+### BUG-10
+**Same account in two tabs breaks silently** (High)
+- **Cause:** a second tab signs in with the remembered token; logging out there revoked
+  the token, so the first tab could not reconnect and its banner never changed.
+- **Fix:** one live socket per account. A new connection sends the old one
+  `signedInElsewhere` and disconnects it; the client returns to login with that message
+  (`socketServer.js`, `NetworkManager.cs`).
 
 ### BUG-09
 **End-to-end test crashed in cleanup on Linux after passing** (Low, test only)

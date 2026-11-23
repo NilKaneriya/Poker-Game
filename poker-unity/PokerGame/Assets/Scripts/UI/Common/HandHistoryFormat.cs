@@ -36,17 +36,35 @@ namespace Poker.UI
                 _ => "{0} " + a.kind,
             };
             string line = string.Format(format, who, amount, total);
+            if (IsYou(record, a.playerId)) line = YouVerb(line);
             if (a.timeout) line += HistoryTexts.TimedOut;
             if (a.left) line += HistoryTexts.Left;
+            return line;
+        }
+
+        /// <summary>"You posts" becomes "You post": the verb after the gold "You" loses its s.</summary>
+        private static string YouVerb(string line)
+        {
+            if (!line.StartsWith(HistoryTexts.You)) return line;
+            string rest = line.Substring(HistoryTexts.You.Length);
+            foreach (var (from, to) in new[]
+            {
+                (" posts ", " post "), (" folds", " fold"), (" checks", " check"), (" calls ", " call "),
+                (" bets ", " bet "), (" raises ", " raise "), (" wins ", " win "), (" is all-in", " are all-in"),
+            })
+            {
+                if (rest.StartsWith(from)) return HistoryTexts.You + to + rest.Substring(from.Length);
+            }
             return line;
         }
 
         public static string WinnerLine(HandRecord record, HandWinner w)
         {
             string who = NameOf(record, w.playerId, w.name);
-            return string.IsNullOrEmpty(w.handName)
+            string line = string.IsNullOrEmpty(w.handName)
                 ? string.Format(HistoryTexts.Won, who, CardFormat.Chips(w.amount))
                 : string.Format(HistoryTexts.WonWith, who, CardFormat.Chips(w.amount), w.handName);
+            return IsYou(record, w.playerId) ? YouVerb(line) : line;
         }
 
         /// <summary>"You won 340 with Three of a Kind", "You folded", "You lost 160".</summary>

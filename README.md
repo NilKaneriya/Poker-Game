@@ -9,7 +9,7 @@ the server**.
 
 | Part | Technology |
 |---|---|
-| Client | Unity 2022.2.20f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
+| Client | Unity 2022.2.2f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
 | Networking | **Socket.IO v4**: Node server + the Firesplash Entertainment Socket.IO client in Unity (`Assets/Firesplash Entertainment`). Login over HTTP/JSON. |
 | Server | Node.js 18+, Express, Socket.IO |
 | Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set; JSON files otherwise |
@@ -17,6 +17,14 @@ the server**.
 **Target layout:** desktop, landscape (designed at 1920x1080 and scaling to any
 landscape window, in the browser via WebGL or as a Windows build). It also runs on
 Android phones and tablets in landscape, but the layout is tuned for desktop.
+
+**Play it now (WebGL):** https://webgl-sooty.vercel.app (the game; it talks to the Socket.IO
+server at https://poker-game-zw79.onrender.com). The server runs on a free host, so the
+first request after a quiet period can take up to a minute while it wakes up. To test
+multiplayer, open the link in two or three browser windows (use a different account in
+each, and leave *Remember me* unticked), create a table in one and join it by code from
+the others; see section 2. A requirement-by-requirement check against the task sheet is in
+[qa/reports/task-compliance.md](qa/reports/task-compliance.md).
 
 See [CODE_GUIDE.md](CODE_GUIDE.md) for a walk-through of every class.
 
@@ -55,7 +63,7 @@ The server listens on `http://localhost:3000`; `GET /health` returns `{"status":
 The start-up log says which one is used (`Player data: MongoDB ...` or `JSON files ...`).
 
 ### Client (Unity Editor)
-1. Open `poker-unity/PokerGame` with **Unity 2022.2.20f1**.
+1. Open `poker-unity/PokerGame` with **Unity 2022.2.2f1**.
 2. Run **Tools > Poker > Build Scenes** (needed the first time, and again after
    pulling changes to the UI). This imports TextMeshPro's essentials if needed, then
    generates the UI images and the placeholder sounds, creates the Splash, Lobby and
@@ -63,10 +71,19 @@ The start-up log says which one is used (`Player data: MongoDB ...` or `JSON fil
 3. The server address is set in `Assets/Resources/ServerConfig` (default `http://localhost:3000`).
 4. Open `Assets/Scene/Splash` and press **Play**. Create an account and sign in.
 
-### Playable build (one address for the game and the server)
-The server can also host the WebGL build, so one deployment gives a single link for
-both the game and the server. This also avoids browsers blocking an https page from
-talking to an http server.
+### WebGL build and hosting
+**One click:** **Poker > Build WebGL** builds into `Build/webgl` (not committed) with
+compression switched off, so it loads on any static host (Vercel, GitHub Pages,
+`python -m http.server`) without special headers. The server address baked into the build
+comes from `Assets/Resources/ServerConfig` (currently the hosted Render server).
+
+**How the submitted demo is hosted:** the WebGL build is a static site on Vercel, and
+the Node server runs on Render (a long-running process, which Socket.IO needs). On Render
+set `CORS_ORIGIN` to the exact Vercel address so browsers may connect. Both links are at
+the top of this README.
+
+**Alternative, one address for both:** the server can host the build itself, which also
+avoids browsers blocking an https page from talking to an http server.
 1. In `Assets/Resources/ServerConfig`, **clear `Server Url`**. An empty value makes a
    WebGL build talk to the address it was loaded from.
 2. **File > Build Settings > WebGL > Build**, output to `poker-server/public/`.
@@ -81,7 +98,8 @@ talking to an http server.
 ### Automated tests
 ```
 cd poker-server
-npm test               # 110 unit tests: hand ranking, side pots, pot distribution, betting rules, bots, stats,
+npm test               # 126 tests: hand ranking, side pots, pot distribution, betting rules, bots, stats, a full
+                       # 6-player table over real sockets (hidden cards, button, showdown, chip totals),
                        # waiting list, hand history, chat, reactions, storage, accounts, profile and settings rules
 npm run test:mongo     # the storage/account/profile/stats tests again on a real MongoDB
                        # (mongodb-memory-server downloads one the first time; nothing to install)
@@ -289,8 +307,12 @@ editor tool, so the scenes are reproducible from code.
   and return to the lobby, where a new table starts everyone at 1,000 chips again. A
   production version would keep table state in a database or Redis and refund
   unfinished hands.
-- **Chips don't carry between tables.** Each table gives 1,000 chips. This is
-  intentional for a virtual-chips prototype, but it means leaving a table resets your stack.
+- **Chips carry between tables, but only in server memory.** Leave with 710 and you
+  sit down with 710. Out of chips (0) gives a fresh 1,000, as "Restart" does. A server
+  restart gives everyone 1,000 again.
+- **One live session per account.** Opening the game in a second tab signs the first
+  tab out with the message "You signed in from another tab or device"; the seat is kept.
+- **Tested on desktop Chrome only;** mobile layout and other browsers are not verified.
 - **Disconnected players slow the table for up to 2 minutes:** each of their turns
   waits out the 30 s timer before auto check/fold. After 2 minutes the seat is freed.
 - **A friends table never adds bots.** If everyone else leaves after the game
@@ -303,6 +325,11 @@ editor tool, so the scenes are reproducible from code.
   Android app from a link would need a deep-link intent filter, which is not configured.
 - **Layout** is designed for desktop landscape. It works on landscape phones but text
   is small on small screens; portrait is not supported.
+- **Cosmetic:** while cards are being dealt, a flying card can briefly cover a name plate.
+  In WebGL, text typed within about a second of clicking a field can land in the previously
+  focused field (the field now takes focus explicitly; not proven fixed in every browser).
+- **The long-session reminder** appears after 60 minutes (`Wellbeing.FirstReminderMinutes`);
+  lower that value to see it quickly. The off switch was checked, the 60 minute wait was not.
 - **Placeholder audio.** Sounds and music are synthesized by an editor tool and can be
   replaced in `Resources/SoundLibrary`. Browsers start audio only after the first click.
 - **Chat history is in memory** and goes when the table closes; it is not moderated
