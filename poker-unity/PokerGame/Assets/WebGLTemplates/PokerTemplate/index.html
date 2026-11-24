@@ -43,6 +43,14 @@
     @keyframes turn { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
     #rotate button { font-size: 18px; padding: 12px 26px; border-radius: 28px; border: 0; background: #3fbf7f; color: #06150d; font-weight: 600; }
     #rotate small { color: #9db7aa; max-width: 320px; }
+    /* Phone keyboard bar for text fields (see MobileKeyboardBridge). Sits at the top so the keyboard never covers it. */
+    #kb { position: fixed; left: 0; right: 0; top: 0; z-index: 20; display: none; gap: 8px; align-items: center;
+      padding: 10px 12px; background: #10211a; border-bottom: 1px solid #3fbf7f; box-sizing: border-box; }
+    #kb label { color: #9db7aa; font-size: 13px; position: absolute; top: 2px; left: 14px; }
+    #kb input { flex: 1; min-width: 0; font-size: 18px; padding: 10px 12px; margin-top: 12px; border-radius: 8px;
+      border: 1px solid #3fbf7f; background: #0b1411; color: #fff; -webkit-user-select: text; user-select: text; }
+    #kb button { margin-top: 12px; font-size: 16px; padding: 10px 16px; border-radius: 8px; border: 0; background: #3fbf7f; color: #06150d; font-weight: 600; }
+    #kb button.cancel { background: #2a3a33; color: #fff; }
     #warning { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: none; }
     #warning div { padding: 8px 12px; color: #000; background: #ffd24d; }
   </style>
@@ -65,6 +73,13 @@
     <small id="rotate-hint">The table is played in landscape.</small>
   </div>
 
+  <div id="kb">
+    <label id="kb-label"></label>
+    <input id="kb-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done">
+    <button id="kb-ok">OK</button>
+    <button id="kb-cancel" class="cancel">&#x2715;</button>
+  </div>
+
   <div id="warning"></div>
 
   <script>
@@ -73,6 +88,31 @@
     var isTouch = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
     var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
     var root = document.documentElement;
+    window.pokerIsTouch = isTouch;
+
+    // Text entry for the game's input fields on phones (Unity WebGL cannot show the keyboard itself).
+    var kbBox = document.getElementById("kb"), kbInput = document.getElementById("kb-input"), kbTarget = null;
+    function closeKeyboard(ok) {
+      if (!kbTarget) return;
+      var target = kbTarget; kbTarget = null;
+      kbBox.style.display = "none";
+      kbInput.blur();
+      if (window.unityInstance) window.unityInstance.SendMessage(target, "OnMobileKeyboardResult", ok ? "1|" + kbInput.value : "0|");
+    }
+    window.pokerOpenKeyboard = function (goName, text, label, secret, numeric, maxLength) {
+      kbTarget = goName;
+      document.getElementById("kb-label").textContent = label || "";
+      kbInput.type = secret ? "password" : "text";
+      kbInput.inputMode = numeric ? "numeric" : "text";
+      kbInput.maxLength = maxLength > 0 ? maxLength : 524288;
+      kbInput.value = text || "";
+      kbBox.style.display = "flex";
+      kbInput.focus();
+      kbInput.select();
+    };
+    document.getElementById("kb-ok").addEventListener("click", function () { closeKeyboard(true); });
+    document.getElementById("kb-cancel").addEventListener("click", function () { closeKeyboard(false); });
+    kbInput.addEventListener("keydown", function (e) { if (e.key === "Enter") closeKeyboard(true); });
 
     function inFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
     function canFullscreen() { return !!(root.requestFullscreen || root.webkitRequestFullscreen); }
