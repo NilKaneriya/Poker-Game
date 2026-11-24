@@ -1,6 +1,12 @@
 # Multiplayer Texas Hold'em
 
-[![Server CI](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/Nil-fantosia/Poker-Game/actions/workflows/server.yml)
+| | |
+|---|---|
+| **Play the game** | https://webgl-sooty.vercel.app |
+| **Source code** | https://github.com/NilKaneriya/Poker-Game (branch `develop`) |
+| **Game server** | https://poker-game-zw79.onrender.com (`/health` answers `{"status":"ok"}`) |
+
+[![Server CI](https://github.com/NilKaneriya/Poker-Game/actions/workflows/server.yml/badge.svg)](https://github.com/NilKaneriya/Poker-Game/actions/workflows/server.yml)
 
 A multiplayer Texas Hold'em prototype for 2 to 6 players, played with **virtual chips
 only**. There are no real money deposits, withdrawals or wagers, no purchases and no
