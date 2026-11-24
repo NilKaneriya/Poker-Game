@@ -21,6 +21,8 @@ namespace Poker.EditorTools
             string outputPath = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "Build", "webgl"));
             string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
 
+            // Full-window canvas with full screen / rotate buttons for phones.
+            PlayerSettings.WebGL.template = "PROJECT:PokerTemplate";
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
             PlayerSettings.WebGL.decompressionFallback = false;
 

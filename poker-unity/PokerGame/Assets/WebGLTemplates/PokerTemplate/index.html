@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0b1411">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+
+  <style>
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      background: #0b1411; overflow: hidden;
+      overscroll-behavior: none; touch-action: none;
+      -webkit-user-select: none; user-select: none;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    /* The canvas fills the whole window; the game's UI scales to any landscape shape. */
+    #unity-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #0b1411; }
+
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 14px; color: #cfe6da; font-size: 16px; background: #0b1411;
+    }
+    #bar { width: min(60vw, 360px); height: 10px; background: #1d2b25; border-radius: 6px; overflow: hidden; }
+    #bar-fill { width: 0%; height: 100%; background: #3fbf7f; transition: width .15s; }
+
+    /* Small round buttons, top centre, out of the way of the table UI. */
+    #tools { position: fixed; top: max(6px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%);
+      display: none; gap: 8px; z-index: 5; }
+    .tool { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35);
+      background: rgba(10,20,16,.55); color: #fff; font-size: 20px; line-height: 36px; text-align: center;
+      cursor: pointer; padding: 0; touch-action: manipulation; }
+    .tool:active { background: rgba(63,191,127,.7); }
+
+    /* Shown on a phone held upright. */
+    #rotate { position: fixed; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center;
+      justify-content: center; gap: 18px; background: rgba(8,16,12,.96); color: #fff; text-align: center; padding: 24px; }
+    #rotate .icon { font-size: 64px; animation: turn 2s ease-in-out infinite; }
+    @keyframes turn { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(-90deg); } }
+    #rotate button { font-size: 18px; padding: 12px 26px; border-radius: 28px; border: 0; background: #3fbf7f; color: #06150d; font-weight: 600; }
+    #rotate small { color: #9db7aa; max-width: 320px; }
+    #warning { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: none; }
+    #warning div { padding: 8px 12px; color: #000; background: #ffd24d; }
+  </style>
+</head>
+
+<body>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+
+  <div id="loading"><div>Loading table…</div><div id="bar"><div id="bar-fill"></div></div></div>
+
+  <div id="tools">
+    <button class="tool" id="btn-full" title="Full screen" aria-label="Full screen">&#x26F6;</button>
+    <button class="tool" id="btn-rotate" title="Rotate to landscape" aria-label="Rotate to landscape">&#x27F3;</button>
+  </div>
+
+  <div id="rotate">
+    <div class="icon">&#x1F4F1;</div>
+    <div style="font-size:20px;font-weight:600">Turn your phone sideways</div>
+    <button id="btn-rotate2">Rotate to landscape</button>
+    <small id="rotate-hint">The table is played in landscape.</small>
+  </div>
+
+  <div id="warning"></div>
+
+  <script>
+    var canvas = document.getElementById("unity-canvas");
+    var warning = document.getElementById("warning");
+    var isTouch = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+    var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && /Macintosh/.test(navigator.userAgent));
+    var root = document.documentElement;
+
+    function inFullscreen() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+    function canFullscreen() { return !!(root.requestFullscreen || root.webkitRequestFullscreen); }
+
+    function enterFullscreen() {
+      var p;
+      if (root.requestFullscreen) p = root.requestFullscreen({ navigationUI: "hide" });
+      else if (root.webkitRequestFullscreen) p = root.webkitRequestFullscreen();
+      return Promise.resolve(p);
+    }
+    function leaveFullscreen() {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    }
+    function toggleFullscreen() {
+      if (inFullscreen()) { leaveFullscreen(); return; }
+      enterFullscreen().then(lockLandscape).catch(function () {});
+    }
+
+    // Android Chrome can lock the orientation once the page is full screen.
+    function lockLandscape() {
+      if (screen.orientation && screen.orientation.lock) return screen.orientation.lock("landscape").catch(function () {});
+      return Promise.resolve();
+    }
+
+    // The "rotate" button: full screen + landscape lock where the browser allows it.
+    // iPhones allow neither, so the player is told to turn the phone by hand.
+    function rotateToLandscape() {
+      var hint = document.getElementById("rotate-hint");
+      var done = function () {
+        if (window.innerHeight > window.innerWidth) {
+          hint.textContent = isIOS
+            ? "iPhone browsers cannot rotate the page for you. Turn the phone sideways and switch off the rotation lock."
+            : "Your browser did not allow rotating. Turn the phone sideways.";
+        }
+        updateLayout();
+      };
+      if (canFullscreen() && !inFullscreen()) enterFullscreen().then(lockLandscape).then(done).catch(done);
+      else lockLandscape().then(done);
+    }
+
+    function updateLayout() {
+      var portrait = window.innerHeight > window.innerWidth;
+      document.getElementById("rotate").style.display = (isTouch && portrait) ? "flex" : "none";
+      document.getElementById("btn-full").style.display = canFullscreen() ? "block" : "none";
+      document.getElementById("btn-rotate").style.display = isTouch ? "block" : "none";
+      document.getElementById("tools").style.display = (canFullscreen() || isTouch) ? "flex" : "none";
+      document.getElementById("btn-full").innerHTML = inFullscreen() ? "&#x2715;" : "&#x26F6;";
+    }
+
+    document.getElementById("btn-full").addEventListener("click", toggleFullscreen);
+    document.getElementById("btn-rotate").addEventListener("click", rotateToLandscape);
+    document.getElementById("btn-rotate2").addEventListener("click", rotateToLandscape);
+    window.addEventListener("resize", updateLayout);
+    window.addEventListener("orientationchange", function () { setTimeout(updateLayout, 250); });
+    document.addEventListener("fullscreenchange", updateLayout);
+    document.addEventListener("webkitfullscreenchange", updateLayout);
+    updateLayout();
+
+    function showBanner(msg, type) {
+      var div = document.createElement("div");
+      div.innerHTML = msg;
+      warning.appendChild(div);
+      warning.style.display = "block";
+      if (type !== "error") setTimeout(function () {
+        if (div.parentNode) warning.removeChild(div);
+        warning.style.display = warning.children.length ? "block" : "none";
+      }, 5000);
+    }
+
+    var buildUrl = "Build";
+    var config = {
+      dataUrl: buildUrl + "/{{{ DATA_FILENAME }}}",
+      frameworkUrl: buildUrl + "/{{{ FRAMEWORK_FILENAME }}}",
+      codeUrl: buildUrl + "/{{{ CODE_FILENAME }}}",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
+      showBanner: showBanner,
+      matchWebGLToCanvasSize: true,
+      // Phones have 3x screens: cap the resolution so the game stays smooth.
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, isTouch ? 2 : 2)
+    };
+
+    var script = document.createElement("script");
+    script.src = buildUrl + "/{{{ LOADER_FILENAME }}}";
+    script.onload = function () {
+      createUnityInstance(canvas, config, function (progress) {
+        document.getElementById("bar-fill").style.width = (progress * 100) + "%";
+      }).then(function (instance) {
+        window.unityInstance = instance;
+        document.getElementById("loading").style.display = "none";
+      }).catch(function (message) { alert(message); });
+    };
+    document.body.appendChild(script);
+  </script>
+</body>
+</html>
