@@ -18,7 +18,7 @@ the server**.
 | Client | Unity 2022.2.2f1 (WebGL, Windows, Android), TextMeshPro, DOTween |
 | Networking | **Socket.IO v4**: Node server + the Firesplash Entertainment Socket.IO client in Unity (`Assets/Firesplash Entertainment`). Login over HTTP/JSON. |
 | Server | Node.js 18+, Express, Socket.IO |
-| Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set; JSON files otherwise |
+| Player data | **MongoDB** (official `mongodb` driver) when `MONGODB_URI` is set (**the live demo uses a free MongoDB Atlas cluster**); JSON files otherwise |
 
 **Target layout:** desktop, landscape (designed at 1920x1080 and scaling to any
 landscape window, in the browser via WebGL or as a Windows build). It also runs on
@@ -90,7 +90,9 @@ compression switched off, so it loads on any static host (Vercel, GitHub Pages,
 comes from `Assets/Resources/ServerConfig` (currently the hosted Render server).
 
 **How the submitted demo is hosted:** the WebGL build is a static site on Vercel, and
-the Node server runs on Render (a long-running process, which Socket.IO needs). On Render
+the Node server runs on Render (a long-running process, which Socket.IO needs), and
+player data (accounts, stats, hand history) is stored in MongoDB Atlas (free M0 cluster),
+so it survives redeploys. On Render
 set `CORS_ORIGIN` to the exact Vercel address so browsers may connect. Both links are at
 the top of this README.
 
@@ -349,8 +351,9 @@ editor tool, so the scenes are reproducible from code.
 - **The Unity client has no automated tests.** The rules, pots, bots, stats and
   networking are tested on the server; the client is tested by hand (section 2).
 - **Break reminder** counts time since the game was opened on that device.
-- **Free hosting** may sleep when idle (slow first load). Without `MONGODB_URI` it may
-  also reset saved accounts and stats on redeploy.
+- **Free hosting** may sleep when idle (slow first load). The live demo keeps accounts and
+  stats in MongoDB Atlas, so redeploys do not reset them. A server started without
+  `MONGODB_URI` saves JSON files instead, and a free host may wipe those on redeploy.
 - **Display names are not unique** (login names are). Two players may both call
   themselves "Ace"; avatars and the login name in the profile tell them apart.
 
