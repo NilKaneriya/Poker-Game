@@ -424,3 +424,13 @@ poker-unity/PokerGame/     Unity client
                            Presenters, Animation, Audio, Preview
     Editor/                Scene, UI art and placeholder sound generators
 ```
+
+---
+
+## 8. Use of AI tools
+
+I used AI coding assistants (Claude) while building this project, for
+code generation, test writing and debugging. I made the design decisions
+(server-authoritative logic, Socket.IO, hidden-card handling, reconnect
+and side-pot rules), reviewed the code, ran the automated tests, and tested
+the game by hand. I am happy to walk through any part of it.
